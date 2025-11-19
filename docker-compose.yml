@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  pela-app:
+    build: .
+    container_name: pela_container
+    ports:
+      - "5000:5000"  # Bilgisayarının 5000 portunu -> Konteynerin 5000 portuna bağla
+    volumes:
+      # Veri Kalıcılığı (Persistence):
+      # Bilgisayarındaki 'data' klasörünü -> Konteynerdeki '/app/data' ile eşle.
+      # Böylece konteyner silinse bile veritabanın ve logların silinmez.
+      - ./data:/app/data
+      
+      # Raporlar da kaybolmasın:
+      - ./static/reports:/app/static/reports
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped

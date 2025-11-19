@@ -263,4 +263,7 @@ def run_analysis():
         return jsonify({'success': False, 'message': f'System Error: {str(e)}'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    host_ip = os.environ.get('FLASK_HOST', '127.0.0.1')
+    
+    print(f" * Running on http://{host_ip}:5000 (Press CTRL+C to quit)")
+    app.run(debug=True, host=host_ip, port=5000)
