@@ -101,9 +101,27 @@
             </div>
             
             <button id="generateBtn" class="cta">Start Analysis</button>
-            <button type="button" onclick="saveProfile()" class="btn-save">
-                💾 Save Current Settings as Profile
-            </button>
+            <button type="button" onclick="saveProfile()" class="btn-save">💾 Save Current Settings as Profile</button>
+
+            <div style="margin-top: 30px; border-top: 1px dashed var(--border); padding-top: 20px;">
+                <h3 style="color: var(--primary); font-size: 1.1rem;">⏰ Automation</h3>
+                
+                <div class="flex-row" style="justify-content: center; margin-bottom: 15px;">
+                    <label style="color: var(--text-muted);">Run Daily At:</label>
+                    <input type="number" id="sched_hour" placeholder="HH" min="0" max="23" style="width: 60px; padding: 8px; border-radius: 4px; border: 1px solid var(--border);">
+                    <span>:</span>
+                    <input type="number" id="sched_min" placeholder="MM" min="0" max="59" style="width: 60px; padding: 8px; border-radius: 4px; border: 1px solid var(--border);">
+                    
+                    <button onclick="scheduleTask()" class="list-btn" style="background-color: var(--success);">+ Schedule Task</button>
+                </div>
+
+                <div id="activeJobsList" style="text-align: left; background: var(--bg); padding: 10px; border-radius: 6px; font-size: 0.9rem;">
+                    <small style="color: var(--text-muted);">Active Jobs:</small>
+                    <ul id="jobsUl" style="list-style: none; padding: 0; margin-top: 5px;">
+                        </ul>
+                </div>
+            </div>
+
             <div id="statusMsg" class="status-box"></div>
         </div>
 

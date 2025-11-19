@@ -130,8 +130,11 @@ function loadHistory() {
 // --- MAIN EVENT LISTENER ---
 document.addEventListener('DOMContentLoaded', function() {
     
+    //Preloads
+    loadSchedules();
     loadHistory();
     fetchProfiles();
+    
     // 1. THEME LOGIC
     const themeToggleBtn = document.getElementById('themeToggle');
     const currentTheme = localStorage.getItem('theme');
@@ -347,4 +350,92 @@ function deleteProfile() {
             fetchProfiles();
             // Formu temizlemek istersen buraya kod ekleyebilirsin
         });
+}
+
+// --- SCHEDULER FUNCTIONS ---
+
+function loadSchedules() {
+    const ul = document.getElementById('jobsUl');
+    fetch('/schedule')
+        .then(res => res.json())
+        .then(data => {
+            ul.innerHTML = '';
+            if (data.jobs.length > 0) {
+                data.jobs.forEach(job => {
+                    let li = document.createElement('li');
+                    li.style.display = 'flex';
+                    li.style.justifyContent = 'space-between';
+                    li.style.marginBottom = '5px';
+                    li.innerHTML = `
+                        <span>Target: <b>${job.target}</b> - Next: ${job.next_run}</span>
+                        <button onclick="deleteSchedule('${job.id}')" style="border:none; background:transparent; color:red; cursor:pointer;">✕</button>
+                    `;
+                    ul.appendChild(li);
+                });
+            } else {
+                ul.innerHTML = '<li style="color:var(--text-muted);">No active schedules.</li>';
+            }
+        });
+}
+
+function deleteSchedule(id) {
+    if(!confirm('Stop this scheduled task?')) return;
+    fetch(`/schedule?id=${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+            loadSchedules();
+        });
+}
+
+function scheduleTask() {
+    const hour = document.getElementById('sched_hour').value;
+    const min = document.getElementById('sched_min').value;
+    
+    if (hour === '' || min === '') {
+        alert("Please set hour and minute.");
+        return;
+    }
+
+    // Mevcut form verilerini topla (Payload oluşturma mantığı fetchLogFiles ile aynı)
+    // Tek fark, bu fonksiyon payload'ı anında göndermek yerine zamanlayıcıya gönderir.
+    let payload = { connection_mode: currentMode };
+    
+    // Formdan verileri çek (Kopyala-Yapıştır mantığı)
+    if (currentMode === 'direct') {
+        payload.server_ip = document.getElementById('d_ip').value.trim();
+        payload.username = document.getElementById('d_user').value.trim();
+        payload.password = document.getElementById('d_pass').value.trim();
+        payload.log_path = document.getElementById('d_search_dir').value.trim(); // Path buradan alınıyor
+        // Eğer dosya seçildiyse onu al, yoksa search path'i al
+        const selected = document.getElementById('d_log_select').value;
+        if(selected) payload.log_path = selected; 
+    } else {
+        payload.jump_host = document.getElementById('t_jump').value.trim();
+        payload.server_ip = document.getElementById('t_ip').value.trim();
+        payload.username = document.getElementById('t_user').value.trim();
+        payload.env_name = document.getElementById('t_env').value.trim();
+        payload.password = document.getElementById('t_pass').value.trim();
+        const selected = document.getElementById('t_log_select').value;
+        payload.log_path = selected ? selected : document.getElementById('t_search_dir').value.trim();
+    }
+
+    if (!payload.server_ip || !payload.password) {
+        alert("Please fill connection details first.");
+        return;
+    }
+
+    // Zaman bilgisini ekle
+    payload.hour = hour;
+    payload.minute = min;
+
+    fetch('/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadSchedules();
+    });
 }

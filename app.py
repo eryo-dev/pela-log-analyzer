@@ -5,6 +5,8 @@ import paramiko
 import shlex
 import sqlite3 
 from datetime import datetime
+from flask_apscheduler import APScheduler
+import atexit
 
 app = Flask(__name__)
 
@@ -77,6 +79,19 @@ def add_audit_log(ip, user, mode, report_url):
 # Initialize DB on startup
 init_db()
 
+# --- SCHEDULER CONFIG ---
+class Config:
+    SCHEDULER_API_ENABLED = True
+    SCHEDULER_DATABASE_URI = f"sqlite:///{DB_NAME}"
+
+app.config.from_object(Config())
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
+
+# Uygulama kapanırken scheduler'ı temiz kapat
+atexit.register(lambda: scheduler.shutdown())
+
 # --- SSH HELPER FUNCTION ---
 def create_ssh_client(mode, data):
     """
@@ -140,6 +155,66 @@ def create_ssh_client(mode, data):
     
     else:
         raise ValueError("Invalid connection mode")
+
+
+def core_analysis_task(data_payload):
+    """
+    Bu fonksiyon hem HTTP isteği hem de Zamanlayıcı tarafından çağrılabilir.
+    Parametre olarak gerekli tüm bağlantı verilerini (şifre dahil) alır.
+    """
+    client = None
+    jump_client = None
+    ip = data_payload.get('server_ip')
+    user = data_payload.get('username')
+    mode = data_payload.get('connection_mode')
+    remote_path = data_payload.get('log_path')
+    
+    # Audit Log için 'Scheduled' modunu belirtelim
+    audit_mode = f"{mode} (Auto)" if data_payload.get('is_scheduled') else mode
+
+    try:
+        # 1. Bağlantı
+        client, jump_client = create_ssh_client(mode, data_payload)
+        
+        # 2. Dosya Çekme
+        local_filename = f"{ip}_{os.path.basename(remote_path)}"
+        local_file_path = os.path.join(LOG_FOLDER, local_filename)
+        command_to_run = f"sudo /bin/cat {shlex.quote(remote_path)}"
+        
+        stdin, stdout, stderr = client.exec_command(command_to_run)
+        log_content = stdout.read().decode('utf-8', errors='ignore')
+        
+        if not log_content.strip():
+            return {'success': False, 'message': 'Empty log retrieved'}
+
+        with open(local_file_path, 'w', encoding='utf-8') as f:
+            f.write(log_content)
+            
+        # Bağlantıları kapat
+        client.close()
+        if jump_client: jump_client.close()
+
+        # 3. Analiz
+        timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
+        report_filename = f"report_{ip}_{timestamp_str}.html"
+        output_path = os.path.join(REPORT_FOLDER, report_filename)
+        web_report_url = f"static/reports/{report_filename}"
+
+        command = [
+            "perl", PGBADGER_SCRIPT, "-o", output_path, "-f", "stderr",
+            "--title", f"Analysis: {ip}", local_file_path 
+        ]
+        process = subprocess.run(command, capture_output=True, text=True)
+
+        if process.returncode == 0:
+            # DB'ye Kaydet
+            add_audit_log(ip, user, audit_mode, web_report_url)
+            return {'success': True, 'report_url': web_report_url}
+        else:
+            return {'success': False, 'message': process.stderr}
+
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
 
 # --- ROUTES ---
 
@@ -244,85 +319,56 @@ def list_files():
         if client: client.close()
         if jump_client: jump_client.close()
 
+@app.route('/schedule', methods=['POST', 'GET', 'DELETE'])
+def manage_schedule():
+    """Zamanlanmış görevleri yönetir."""
+    if request.method == 'POST':
+        # Yeni görev ekle
+        data = request.get_json()
+        job_id = f"job_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Veriye 'is_scheduled' bayrağı ekle
+        task_data = data.copy()
+        task_data['is_scheduled'] = True
+        
+        # Görevi ekle (Varsayılan: Her gün belirtilen saatte)
+        # data['hour'] ve data['minute'] frontend'den gelecek
+        scheduler.add_job(
+            id=job_id,
+            func=core_analysis_task,
+            args=[task_data],
+            trigger='cron',
+            hour=data.get('hour'),
+            minute=data.get('minute')
+        )
+        return jsonify({'success': True, 'message': 'Task Scheduled!'})
+
+    elif request.method == 'GET':
+        # Görevleri Listele
+        jobs = []
+        for job in scheduler.get_jobs():
+            # Job argümanlarından hedef IP'yi çekip gösterelim
+            target = job.args[0].get('server_ip') if job.args else 'Unknown'
+            next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M") if job.next_run_time else 'N/A'
+            jobs.append({'id': job.id, 'target': target, 'next_run': next_run})
+        return jsonify({'success': True, 'jobs': jobs})
+
+    elif request.method == 'DELETE':
+        job_id = request.args.get('id')
+        scheduler.remove_job(job_id)
+        return jsonify({'success': True, 'message': 'Schedule deleted.'})
+
 @app.route('/run-analysis', methods=['POST'])
 def run_analysis():
-    """Main logic to pull log and run pgBadger."""
-    client = None
-    jump_client = None
-
-    try:
-        data = request.get_json()
-        mode = data.get('connection_mode', 'direct')
-        
-        # Inputs
-        ip = data.get('server_ip')
-        user = data.get('username')
-        # Password is used in helper function
-        remote_path = data.get('log_path')
-
-        if not remote_path:
-             return jsonify({'success': False, 'message': 'Please select a log file first.'})
-
-        # 1. Establish Connection
-        try:
-            client, jump_client = create_ssh_client(mode, data)
-        except Exception as e:
-            return jsonify({'success': False, 'message': f'Connection Failed: {str(e)}'})
-
-        # 2. File Streaming
-        local_filename = f"{ip}_{os.path.basename(remote_path)}"
-        local_file_path = os.path.join(LOG_FOLDER, local_filename)
-        
-        # Stream file content using cat
-        command_to_run = f"sudo /bin/cat {shlex.quote(remote_path)}"
-        
-        stdin, stdout, stderr = client.exec_command(command_to_run)
-        log_content = stdout.read().decode('utf-8', errors='ignore')
-        
-        if not log_content.strip():
-            error_msg = stderr.read().decode('utf-8', errors='ignore')
-            if error_msg:
-                 return jsonify({'success': False, 'message': f'Read Error: {error_msg}'})
-            return jsonify({'success': False, 'message': 'Empty log file retrieved.'})
-
-        # Save to local file
-        with open(local_file_path, 'w', encoding='utf-8') as f:
-            f.write(log_content)
-
-        # Close SSH connections
-        client.close()
-        if jump_client: jump_client.close()
-
-        # 3. Analysis (pgBadger)
-        report_filename = f"report_{ip}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
-        output_path = os.path.join(REPORT_FOLDER, report_filename)
-        web_report_url = f"static/reports/{report_filename}"
-
-        command = [
-            "perl", PGBADGER_SCRIPT, 
-            "-o", output_path, 
-            "-f", "stderr",
-            "--title", f"Analysis: {ip}", 
-            local_file_path 
-        ]
-
-        process = subprocess.run(command, capture_output=True, text=True)
-
-        if process.returncode == 0:
-            # Save to Audit Log
-            add_audit_log(ip, user, mode, web_report_url)
-            
-            return jsonify({
-                'success': True, 
-                'message': f'Analysis completed for <b>{ip}</b>.',
-                'report_url': web_report_url
-            })
-        else:
-            return jsonify({'success': False, 'message': f'pgBadger Error: {process.stderr}'})
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'System Error: {str(e)}'})
-
+    data = request.get_json()
+    # Helper fonksiyonu çağır
+    result = core_analysis_task(data)
+    
+    if result['success']:
+        return jsonify({'success': True, 'message': 'Analysis Complete', 'report_url': result['report_url']})
+    else:
+        return jsonify({'success': False, 'message': result['message']})
+    
 if __name__ == '__main__':
     host_ip = os.environ.get('FLASK_HOST', '127.0.0.1')
     
