@@ -21,6 +21,17 @@
     <div class="container">
         
         <div class="action-panel">
+            <div class="profile-manager">
+                <label class="profile-label">📂 Load Profile:</label>
+                
+                <div class="select-wrapper">
+                    <select id="profileSelect" onchange="loadProfileData()" class="profile-select">
+                        <option value="">-- Select Saved Profile --</option>
+                    </select>
+                </div>
+
+                <button onclick="deleteProfile()" class="btn-delete" title="Delete Selected Profile">🗑️</button>
+            </div>
             <div class="tabs">
                 <div class="tab-btn active" onclick="switchTab('direct')">Direct Connection</div>
                 <div class="tab-btn" onclick="switchTab('tunnel')">Jump Host Tunnel</div>
@@ -90,6 +101,9 @@
             </div>
             
             <button id="generateBtn" class="cta">Start Analysis</button>
+            <button type="button" onclick="saveProfile()" class="btn-save">
+                💾 Save Current Settings as Profile
+            </button>
             <div id="statusMsg" class="status-box"></div>
         </div>
 
@@ -117,7 +131,7 @@
         </div>
 
         <div class="footer">
-            <p>PELA v1.2.0 | Developer - Eryo | Using - pgBadger</p>
+            <p>PELA v1.3.0 | Developer - Eryo | Using - pgBadger</p>
             <p><a href="https://github.com/darold/pgbadger" style="opacity: 80%;">pgBadger Repo</a></p>
             <p><a href="https://github.com/eryo-dev/pela-log-analyzer" style="opacity: 80%;">PELA Repo</a></p>
         </div>

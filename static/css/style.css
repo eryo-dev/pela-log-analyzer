@@ -50,6 +50,130 @@ body {
     transition: background-color 0.3s;
 }
 
+/* --- PROFILE MANAGER STYLES (MODERN) --- */
+
+.profile-manager {
+    margin-bottom: 25px; 
+    padding-bottom: 15px; 
+    border-bottom: 1px dashed var(--border); 
+    display: flex; 
+    gap: 15px; /* Boşluğu biraz artırdık */
+    align-items: center; 
+    justify-content: center;
+}
+
+.profile-label {
+    font-weight: 600; 
+    color: var(--primary); 
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* Dropdown Kapsayıcısı (Ok işaretini konumlandırmak için) */
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 250px; /* Genişliği sabitledik */
+}
+
+/* Dropdown'ın kendisi */
+.profile-select {
+    width: 100%;
+    padding: 10px 15px;
+    padding-right: 40px; /* Ok işareti için sağdan boşluk */
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-color);
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    
+    /* Standart oku gizle */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Hover Durumu */
+.profile-select:hover {
+    border-color: var(--accent);
+}
+
+/* Tıklanınca (Focus) */
+.profile-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2); /* Mavi hale */
+}
+
+/* Özel Ok İşareti (CSS ile çizim) */
+.select-wrapper::after {
+    content: "▼";
+    font-size: 0.7rem;
+    color: var(--accent);
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none; /* Tıklamayı engellemesin */
+    transition: transform 0.3s ease;
+}
+
+/* Menü açıldığında oku döndürmek (Focus hilesi) */
+.select-wrapper:focus-within::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Delete Butonu */
+.btn-delete {
+    background: transparent; 
+    border: 1px solid transparent; 
+    color: #e74c3c; 
+    cursor: pointer; 
+    font-size: 1.1rem;
+    transition: all 0.2s;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    transform: scale(1.05);
+}
+
+/* Save Button (Daha modern görünüm) */
+.btn-save {
+    margin-top: 20px; 
+    background: transparent; 
+    border: 1px dashed var(--accent); 
+    color: var(--accent); 
+    padding: 12px 20px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    width: 100%; 
+    max-width: 300px; 
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-save:hover {
+    background-color: rgba(52, 152, 219, 0.05);
+    border-style: solid;
+    transform: translateY(-2px);
+}
+
 .logo { 
     font-weight: 600; 
     font-size: 1.2rem; 

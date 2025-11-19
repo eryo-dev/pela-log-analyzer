@@ -130,6 +130,8 @@ function loadHistory() {
 // --- MAIN EVENT LISTENER ---
 document.addEventListener('DOMContentLoaded', function() {
     
+    loadHistory();
+    fetchProfiles();
     // 1. THEME LOGIC
     const themeToggleBtn = document.getElementById('themeToggle');
     const currentTheme = localStorage.getItem('theme');
@@ -250,3 +252,99 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function fetchProfiles() {
+    const select = document.getElementById('profileSelect');
+    fetch('/profiles')
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                // Mevcut seçenekleri temizle (ilk seçenek hariç)
+                select.innerHTML = '<option value="">-- Select Saved Profile --</option>';
+                data.data.forEach(p => {
+                    let opt = document.createElement('option');
+                    opt.value = JSON.stringify(p); // Tüm profil verisini value içine gömüyoruz
+                    opt.innerText = p.profile_name;
+                    select.appendChild(opt);
+                });
+            }
+        });
+}
+
+// 2. Yeni Profil Kaydet
+function saveProfile() {
+    const name = prompt("Enter a name for this profile:");
+    if (!name) return;
+
+    // Şu anki moddan verileri topla
+    let payload = { 
+        profile_name: name,
+        connection_mode: currentMode 
+    };
+
+    if (currentMode === 'direct') {
+        payload.server_ip = document.getElementById('d_ip').value.trim();
+        payload.username = document.getElementById('d_user').value.trim();
+        payload.log_path = document.getElementById('d_search_dir').value.trim(); // Search dir'i kaydediyoruz
+    } else {
+        payload.jump_host = document.getElementById('t_jump').value.trim();
+        payload.server_ip = document.getElementById('t_ip').value.trim();
+        payload.username = document.getElementById('t_user').value.trim();
+        payload.env_name = document.getElementById('t_env').value.trim();
+        payload.log_path = document.getElementById('t_search_dir').value.trim();
+    }
+
+    fetch('/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        fetchProfiles(); // Listeyi yenile
+    });
+}
+
+// 3. Seçilen Profili Forma Doldur
+function loadProfileData() {
+    const select = document.getElementById('profileSelect');
+    if (!select.value) return;
+
+    const data = JSON.parse(select.value);
+    
+    // Sekmeyi değiştir
+    switchTab(data.connection_mode);
+
+    if (data.connection_mode === 'direct') {
+        document.getElementById('d_ip').value = data.server_ip;
+        document.getElementById('d_user').value = data.username || '';
+        document.getElementById('d_search_dir').value = data.log_path || '/var/log/postgresql/';
+    } else {
+        document.getElementById('t_jump').value = data.jump_host || '';
+        document.getElementById('t_ip').value = data.server_ip;
+        document.getElementById('t_user').value = data.username || '';
+        document.getElementById('t_env').value = data.env_name || '';
+        document.getElementById('t_search_dir').value = data.log_path || '/tmp/';
+    }
+}
+
+// 4. Profil Sil
+function deleteProfile() {
+    const select = document.getElementById('profileSelect');
+    if (!select.value) {
+        alert("Please select a profile to delete.");
+        return;
+    }
+    
+    const data = JSON.parse(select.value);
+    if(!confirm(`Are you sure you want to delete "${data.profile_name}"?`)) return;
+
+    fetch(`/profiles?id=${data.id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            fetchProfiles();
+            // Formu temizlemek istersen buraya kod ekleyebilirsin
+        });
+}

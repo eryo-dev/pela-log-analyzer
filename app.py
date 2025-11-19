@@ -43,6 +43,19 @@ def init_db():
                     report_url TEXT NOT NULL
                 )
             ''')
+
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS saved_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_name TEXT NOT NULL UNIQUE,
+                connection_mode TEXT NOT NULL,
+                server_ip TEXT NOT NULL,
+                username TEXT,
+                jump_host TEXT,
+                env_name TEXT,
+                log_path TEXT
+            )
+        ''')
             conn.commit()
     except Exception as e:
         print(f"Init DB Error: {e}")
@@ -146,6 +159,54 @@ def get_history():
             return jsonify({'success': True, 'data': rows})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+# --- PROFILE MANAGEMENT ROUTES (YENİ EKLENEN KISIM) ---
+
+@app.route('/profiles', methods=['GET', 'POST', 'DELETE'])
+def manage_profiles():
+    """Profil kaydetme, listeleme ve silme işlemleri."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # 1. GET: Profilleri Listele
+            if request.method == 'GET':
+                cursor.execute("SELECT * FROM saved_profiles ORDER BY profile_name ASC")
+                profiles = [dict(row) for row in cursor.fetchall()]
+                return jsonify({'success': True, 'data': profiles})
+
+            # 2. POST: Yeni Profil Kaydet
+            if request.method == 'POST':
+                data = request.get_json()
+                name = data.get('profile_name')
+                
+                # Aynı isimde varsa üzerine yaz (UPSERT mantığı yerine DELETE+INSERT basitliği)
+                cursor.execute("DELETE FROM saved_profiles WHERE profile_name = ?", (name,))
+                
+                cursor.execute('''
+                    INSERT INTO saved_profiles 
+                    (profile_name, connection_mode, server_ip, username, jump_host, env_name, log_path)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    name, data.get('connection_mode'), data.get('server_ip'),
+                    data.get('username'), data.get('jump_host'), data.get('env_name'),
+                    data.get('log_path')
+                ))
+                conn.commit()
+                return jsonify({'success': True, 'message': f'Profile "{name}" saved.'})
+
+            # 3. DELETE: Profil Sil
+            if request.method == 'DELETE':
+                profile_id = request.args.get('id')
+                cursor.execute("DELETE FROM saved_profiles WHERE id = ?", (profile_id,))
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Profile deleted.'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+# -------------------------------------------------------
 
 @app.route('/list-files', methods=['POST'])
 def list_files():
