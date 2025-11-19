@@ -1,8 +1,19 @@
+# Python
 venv/
 __pycache__/
 *.pyc
-*.log
-pela_history.db
-static/reports/*
+
+# IDE Settings
 .vscode/
 .idea/
+
+# Data & Logs (Data klasöründeki içerikleri yollama)
+data/logs/*
+data/*.db
+
+# Generated Reports (Raporları yollama)
+static/reports/*
+
+# Sensitive Info
+.env
+.config

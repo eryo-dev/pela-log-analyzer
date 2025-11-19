@@ -3,45 +3,55 @@ import os
 import subprocess
 import paramiko 
 import shlex
-import sqlite3 # Python'un yerleşik veritabanı
+import sqlite3 
 from datetime import datetime
 
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (KLASÖR YOLLARI - DÜZELTİLMİŞ) ---
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-REPORT_FOLDER = os.path.join(BASE_DIR, 'static', 'reports')
-LOG_FOLDER = os.path.join(BASE_DIR, 'logs')
-PGBADGER_SCRIPT = os.path.join(BASE_DIR, 'pgbadger.pl')
-DB_NAME = os.path.join(BASE_DIR, 'pela.db') # Veritabanı dosyası
 
-# Klasörleri oluştur
+# 1. Statik Dosyalar (Raporlar)
+REPORT_FOLDER = os.path.join(BASE_DIR, 'static', 'reports')
+
+# 2. Veri Klasörü (Data)
+DATA_FOLDER = os.path.join(BASE_DIR, 'data') # Ana Veri Klasörü
+LOG_FOLDER = os.path.join(DATA_FOLDER, 'logs') # <-- DİKKAT: Logs artık Data'nın içinde
+DB_NAME = os.path.join(DATA_FOLDER, 'pela.db') # <-- DİKKAT: DB artık Data'nın içinde
+
+# 3. Araçlar Klasörü (Tools)
+PGBADGER_SCRIPT = os.path.join(BASE_DIR, 'tools', 'pgbadger.pl') # <-- DİKKAT: Script artık Tools'un içinde
+
+# Klasörlerin varlığından emin ol
 os.makedirs(REPORT_FOLDER, exist_ok=True)
-os.makedirs(LOG_FOLDER, exist_ok=True)
+os.makedirs(DATA_FOLDER, exist_ok=True) # Önce Data klasörünü oluştur
+os.makedirs(LOG_FOLDER, exist_ok=True)  # Sonra içindeki Logs'u oluştur
 
 # --- DATABASE SETUP ---
 def init_db():
-    """Veritabanı tablosunu yoksa oluşturur (Migration)."""
-    with sqlite3.connect(DB_NAME) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS audit_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                server_ip TEXT NOT NULL,
-                username TEXT NOT NULL,
-                connection_mode TEXT NOT NULL,
-                report_url TEXT NOT NULL
-            )
-        ''')
-        conn.commit()
+    """Veritabanı tablosunu yoksa oluşturur."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS audit_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    server_ip TEXT NOT NULL,
+                    username TEXT NOT NULL,
+                    connection_mode TEXT NOT NULL,
+                    report_url TEXT NOT NULL
+                )
+            ''')
+            conn.commit()
+    except Exception as e:
+        print(f"Init DB Error: {e}")
 
 def add_audit_log(ip, user, mode, report_url):
     """Analiz sonucunu veritabanına kaydeder."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
-            # Şu anki zamanı formatla (Yıl-Ay-Gün Saat:Dakika:Saniye)
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             cursor.execute(
                 "INSERT INTO audit_log (timestamp, server_ip, username, connection_mode, report_url) VALUES (?, ?, ?, ?, ?)",
@@ -49,9 +59,9 @@ def add_audit_log(ip, user, mode, report_url):
             )
             conn.commit()
     except Exception as e:
-        print(f"DB Error: {e}")
+        print(f"DB Logging Error: {e}")
 
-# Uygulama başlarken veritabanını hazırla
+# Başlangıçta DB kontrolü
 init_db()
 
 @app.route('/')
@@ -60,12 +70,11 @@ def index():
 
 @app.route('/history')
 def get_history():
-    """Frontend için geçmiş kayıtları JSON olarak döner."""
+    """Geçmiş kayıtları JSON olarak döner."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            conn.row_factory = sqlite3.Row # Sütun isimleriyle erişebilmek için
+            conn.row_factory = sqlite3.Row 
             cursor = conn.cursor()
-            # En son yapılan en üstte görünsün (ORDER BY id DESC)
             cursor.execute("SELECT * FROM audit_log ORDER BY id DESC LIMIT 50")
             rows = [dict(row) for row in cursor.fetchall()]
             return jsonify({'success': True, 'data': rows})
@@ -81,7 +90,6 @@ def run_analysis():
         data = request.get_json()
         mode = data.get('connection_mode', 'direct')
         
-        # Common fields
         ip = data.get('server_ip')
         user = data.get('username')
         pwd = data.get('password')
@@ -127,7 +135,7 @@ def run_analysis():
             return jsonify({'success': False, 'message': 'Connection failed.'})
 
         local_filename = f"{ip}_{os.path.basename(remote_path)}"
-        local_file_path = os.path.join(LOG_FOLDER, local_filename)
+        local_file_path = os.path.join(LOG_FOLDER, local_filename) # <-- LOG_FOLDER artık data/logs/
         
         command_to_run = f"sudo /bin/cat {shlex.quote(remote_path)}"
         
@@ -147,12 +155,11 @@ def run_analysis():
         if jump_client: jump_client.close()
 
         # --- ANALYSIS (pgBadger) ---
-        # Rapor ismine timestamp ekledik ki benzersiz olsun
-        timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
-        report_filename = f"report_{ip}_{timestamp_str}.html"
+        report_filename = f"report_{ip}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
         output_path = os.path.join(REPORT_FOLDER, report_filename)
         web_report_url = f"static/reports/{report_filename}"
 
+        # PGBADGER_SCRIPT artık tools/ altında
         command = [
             "perl", PGBADGER_SCRIPT, "-o", output_path, "-f", "stderr",
             "--title", f"Analysis: {ip}", local_file_path 
@@ -161,9 +168,7 @@ def run_analysis():
         process = subprocess.run(command, capture_output=True, text=True)
 
         if process.returncode == 0:
-            # ==> BAŞARILI OLDUĞUNDA DB'YE KAYDET <==
             add_audit_log(ip, user, mode, web_report_url)
-            
             return jsonify({
                 'success': True, 
                 'message': f'Analysis completed for <b>{ip}</b>.',
