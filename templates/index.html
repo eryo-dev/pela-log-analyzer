@@ -37,9 +37,16 @@
                         <input type="password" id="d_pass" placeholder="Password" style="flex:1;">
                     </div>
                 </div>
+                
                 <div class="input-group">
-                    <label>Log Path</label>
-                    <input type="text" id="d_path" value="/var/log/postgresql.log" placeholder="Full path to log file">
+                    <label>Log File Selection</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="d_search_dir" value="/var/log/postgresql/" placeholder="Base Folder Path" style="flex:1;">
+                        <button type="button" onclick="fetchLogFiles('direct')" style="padding: 10px 20px; background: #34495e; color: white; border:none; border-radius:6px; cursor:pointer;">📂 List Files</button>
+                    </div>
+                    <select id="d_log_select" style="width: 100%; padding: 12px; margin-top: 10px; display: none; border: 2px solid #3498db; border-radius: 6px; outline: none; font-family: 'Inter', sans-serif;">
+                        <option value="">-- Select a Log File --</option>
+                    </select>
                 </div>
             </div>
 
@@ -63,16 +70,23 @@
                     <label>Authentication</label>
                     <input type="password" id="t_pass" placeholder="Vault/PAM Password">
                 </div>
+                
                 <div class="input-group">
-                    <label>Log Path</label>
-                    <input type="text" id="t_path" value="/tmp/postgresql-Wed.log" placeholder="Full path to log file">
+                    <label>Log File Selection</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="t_search_dir" value="/tmp/" placeholder="Base Folder Path" style="flex:1;">
+                        <button type="button" onclick="fetchLogFiles('tunnel')" style="padding: 10px 20px; background: #34495e; color: white; border:none; border-radius:6px; cursor:pointer;">📂 List Files</button>
+                    </div>
+                    <select id="t_log_select" style="width: 100%; padding: 12px; margin-top: 10px; display: none; border: 2px solid #3498db; border-radius: 6px; outline: none; font-family: 'Inter', sans-serif;">
+                        <option value="">-- Select a Log File --</option>
+                    </select>
                 </div>
             </div>
             
             <button id="generateBtn" class="cta">Start Analysis</button>
             <div id="statusMsg" class="status-box"></div>
         </div>
-        
+
         <div class="history-panel">
             <div class="history-header">
                 <h2>📊 Audit History</h2>

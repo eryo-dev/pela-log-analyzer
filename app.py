@@ -8,28 +8,28 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- CONFIGURATION (KLASÖR YOLLARI - DÜZELTİLMİŞ) ---
+# --- CONFIGURATION & PATHS ---
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# 1. Statik Dosyalar (Raporlar)
+# 1. Static Files (Reports)
 REPORT_FOLDER = os.path.join(BASE_DIR, 'static', 'reports')
 
-# 2. Veri Klasörü (Data)
-DATA_FOLDER = os.path.join(BASE_DIR, 'data') # Ana Veri Klasörü
-LOG_FOLDER = os.path.join(DATA_FOLDER, 'logs') # <-- DİKKAT: Logs artık Data'nın içinde
-DB_NAME = os.path.join(DATA_FOLDER, 'pela.db') # <-- DİKKAT: DB artık Data'nın içinde
+# 2. Data Folder (Logs & DB)
+DATA_FOLDER = os.path.join(BASE_DIR, 'data') 
+LOG_FOLDER = os.path.join(DATA_FOLDER, 'logs') 
+DB_NAME = os.path.join(DATA_FOLDER, 'pela.db') 
 
-# 3. Araçlar Klasörü (Tools)
-PGBADGER_SCRIPT = os.path.join(BASE_DIR, 'tools', 'pgbadger.pl') # <-- DİKKAT: Script artık Tools'un içinde
+# 3. Tools Folder (pgBadger Script)
+PGBADGER_SCRIPT = os.path.join(BASE_DIR, 'tools', 'pgbadger.pl') 
 
-# Klasörlerin varlığından emin ol
+# Ensure directories exist
 os.makedirs(REPORT_FOLDER, exist_ok=True)
-os.makedirs(DATA_FOLDER, exist_ok=True) # Önce Data klasörünü oluştur
-os.makedirs(LOG_FOLDER, exist_ok=True)  # Sonra içindeki Logs'u oluştur
+os.makedirs(DATA_FOLDER, exist_ok=True)
+os.makedirs(LOG_FOLDER, exist_ok=True)
 
 # --- DATABASE SETUP ---
 def init_db():
-    """Veritabanı tablosunu yoksa oluşturur."""
+    """Creates the audit_log table if it doesn't exist."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
@@ -48,7 +48,7 @@ def init_db():
         print(f"Init DB Error: {e}")
 
 def add_audit_log(ip, user, mode, report_url):
-    """Analiz sonucunu veritabanına kaydeder."""
+    """Inserts a new record into the audit log."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
@@ -61,8 +61,74 @@ def add_audit_log(ip, user, mode, report_url):
     except Exception as e:
         print(f"DB Logging Error: {e}")
 
-# Başlangıçta DB kontrolü
+# Initialize DB on startup
 init_db()
+
+# --- SSH HELPER FUNCTION ---
+def create_ssh_client(mode, data):
+    """
+    Creates and returns an SSH client based on the connection mode.
+    Returns: (client, jump_client_or_None)
+    """
+    ip = data.get('server_ip')
+    user = data.get('username')
+    pwd = data.get('password')
+
+    if mode == 'direct':
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(
+            hostname=ip, 
+            username=user, 
+            password=pwd, 
+            timeout=10, 
+            look_for_keys=False, 
+            allow_agent=False
+        )
+        return client, None
+
+    elif mode == 'tunnel':
+        jump_host = data.get('jump_host')
+        env_name = data.get('env_name')
+        
+        # Construct complex username for PAM/Vault tunneling
+        target_username = f"{user}@{user}#{env_name}@{ip}"
+        
+        # 1. Connect to Jump Host
+        jump_client = paramiko.SSHClient()
+        jump_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        jump_client.connect(
+            hostname=jump_host, 
+            username=user, 
+            password=pwd, 
+            timeout=10, 
+            look_for_keys=False, 
+            allow_agent=False
+        )
+        
+        # 2. Create Tunnel
+        transport = jump_client.get_transport()
+        proxy_socket = transport.open_channel("direct-tcpip", (ip, 22), ('127.0.0.1', 0))
+        
+        # 3. Connect to Target via Tunnel
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(
+            hostname=jump_host, 
+            username=target_username, 
+            password=pwd, 
+            sock=proxy_socket, 
+            timeout=10, 
+            look_for_keys=False, 
+            allow_agent=False
+        )
+        
+        return client, jump_client
+    
+    else:
+        raise ValueError("Invalid connection mode")
+
+# --- ROUTES ---
 
 @app.route('/')
 def index():
@@ -70,7 +136,7 @@ def index():
 
 @app.route('/history')
 def get_history():
-    """Geçmiş kayıtları JSON olarak döner."""
+    """API to fetch audit history."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             conn.row_factory = sqlite3.Row 
@@ -81,8 +147,45 @@ def get_history():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/list-files', methods=['POST'])
+def list_files():
+    """API to list log files in a remote directory."""
+    client = None
+    jump_client = None
+    try:
+        data = request.get_json()
+        mode = data.get('connection_mode', 'direct')
+        search_path = data.get('search_path', '/var/log/postgresql/') 
+
+        # Establish Connection using Helper
+        client, jump_client = create_ssh_client(mode, data)
+        
+        # List files (sudo might be needed depending on permissions)
+        # ls -1t orders by modification time (newest first)
+        command = f"sudo ls -1t {search_path}*" 
+        
+        stdin, stdout, stderr = client.exec_command(command)
+        file_list_raw = stdout.read().decode('utf-8', errors='ignore')
+        error_msg = stderr.read().decode('utf-8', errors='ignore')
+
+        # If we got files, ignore minor stderr warnings. If empty and stderr exists, it's an error.
+        if not file_list_raw.strip() and error_msg:
+             return jsonify({'success': False, 'message': f'List Error: {error_msg}'})
+
+        # Clean up the list
+        files = [f.strip() for f in file_list_raw.split('\n') if f.strip()]
+        
+        return jsonify({'success': True, 'files': files})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Connection Error: {str(e)}'})
+    finally:
+        if client: client.close()
+        if jump_client: jump_client.close()
+
 @app.route('/run-analysis', methods=['POST'])
 def run_analysis():
+    """Main logic to pull log and run pgBadger."""
     client = None
     jump_client = None
 
@@ -90,53 +193,26 @@ def run_analysis():
         data = request.get_json()
         mode = data.get('connection_mode', 'direct')
         
+        # Inputs
         ip = data.get('server_ip')
         user = data.get('username')
-        pwd = data.get('password')
+        # Password is used in helper function
         remote_path = data.get('log_path')
-        
-        # --- MODE 1: DIRECT SSH ---
-        if mode == 'direct':
-            if not all([ip, user, pwd, remote_path]):
-                return jsonify({'success': False, 'message': 'Missing credentials.'})
-            try:
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(hostname=ip, username=user, password=pwd, timeout=10, look_for_keys=False, allow_agent=False)
-            except Exception as e:
-                return jsonify({'success': False, 'message': f'Direct SSH Error: {str(e)}'})
 
-        # --- MODE 2: JUMP HOST TUNNEL ---
-        elif mode == 'tunnel':
-            jump_host = data.get('jump_host')
-            env_name = data.get('env_name')
-            
-            if not all([jump_host, ip, user, env_name, pwd, remote_path]):
-                return jsonify({'success': False, 'message': 'Missing Tunnel credentials.'})
-            
-            target_username = f"{user}@{user}#{env_name}@{ip}"
+        if not remote_path:
+             return jsonify({'success': False, 'message': 'Please select a log file first.'})
 
-            try:
-                jump_client = paramiko.SSHClient()
-                jump_client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-                jump_client.connect(hostname=jump_host, username=user, password=pwd, timeout=10, look_for_keys=False, allow_agent=False)
-                
-                transport = jump_client.get_transport()
-                proxy_socket = transport.open_channel("direct-tcpip", (ip, 22), ('127.0.0.1', 0))
-                
-                client = paramiko.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(hostname=jump_host, username=target_username, password=pwd, sock=proxy_socket, timeout=10, look_for_keys=False, allow_agent=False)
-            except Exception as e:
-                return jsonify({'success': False, 'message': f'Tunnel Error: {str(e)}'})
+        # 1. Establish Connection
+        try:
+            client, jump_client = create_ssh_client(mode, data)
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Connection Failed: {str(e)}'})
 
-        # --- FILE STREAMING ---
-        if not client:
-            return jsonify({'success': False, 'message': 'Connection failed.'})
-
+        # 2. File Streaming
         local_filename = f"{ip}_{os.path.basename(remote_path)}"
-        local_file_path = os.path.join(LOG_FOLDER, local_filename) # <-- LOG_FOLDER artık data/logs/
+        local_file_path = os.path.join(LOG_FOLDER, local_filename)
         
+        # Stream file content using cat
         command_to_run = f"sudo /bin/cat {shlex.quote(remote_path)}"
         
         stdin, stdout, stderr = client.exec_command(command_to_run)
@@ -145,30 +221,36 @@ def run_analysis():
         if not log_content.strip():
             error_msg = stderr.read().decode('utf-8', errors='ignore')
             if error_msg:
-                 return jsonify({'success': False, 'message': f'Remote Command Error: {error_msg}'})
+                 return jsonify({'success': False, 'message': f'Read Error: {error_msg}'})
             return jsonify({'success': False, 'message': 'Empty log file retrieved.'})
 
+        # Save to local file
         with open(local_file_path, 'w', encoding='utf-8') as f:
             f.write(log_content)
 
+        # Close SSH connections
         client.close()
         if jump_client: jump_client.close()
 
-        # --- ANALYSIS (pgBadger) ---
+        # 3. Analysis (pgBadger)
         report_filename = f"report_{ip}_{datetime.now().strftime('%Y%m%d%H%M%S')}.html"
         output_path = os.path.join(REPORT_FOLDER, report_filename)
         web_report_url = f"static/reports/{report_filename}"
 
-        # PGBADGER_SCRIPT artık tools/ altında
         command = [
-            "perl", PGBADGER_SCRIPT, "-o", output_path, "-f", "stderr",
-            "--title", f"Analysis: {ip}", local_file_path 
+            "perl", PGBADGER_SCRIPT, 
+            "-o", output_path, 
+            "-f", "stderr",
+            "--title", f"Analysis: {ip}", 
+            local_file_path 
         ]
 
         process = subprocess.run(command, capture_output=True, text=True)
 
         if process.returncode == 0:
+            # Save to Audit Log
             add_audit_log(ip, user, mode, web_report_url)
+            
             return jsonify({
                 'success': True, 
                 'message': f'Analysis completed for <b>{ip}</b>.',
