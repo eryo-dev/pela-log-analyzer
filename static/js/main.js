@@ -1,13 +1,13 @@
-// Global State: Aktif modu takip eder ('direct' veya 'tunnel')
+// Global State
 let currentMode = 'direct'; 
 
 /**
- * Sekmeler arası geçişi yönetir.
+ * Handles switching between "Direct SSH" and "Jump Host Tunnel" tabs.
  */
 function switchTab(mode) {
     currentMode = mode;
     
-    // 1. Tab butonlarını güncelle
+    // Update Tab Buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -15,7 +15,7 @@ function switchTab(mode) {
         event.target.classList.add('active');
     }
 
-    // 2. Form alanlarını güncelle
+    // Update Form Visibility
     document.querySelectorAll('.form-section').forEach(section => {
         section.classList.remove('active');
     });
@@ -23,14 +23,13 @@ function switchTab(mode) {
 }
 
 /**
- * Sunucudan dosya listesini çeker ve Dropdown'ı doldurur.
- * @param {string} mode - 'direct' veya 'tunnel'
+ * Fetches list of log files from the remote server.
  */
 function fetchLogFiles(mode) {
     let payload = { connection_mode: mode };
     let prefix = (mode === 'direct') ? 'd_' : 't_';
 
-    // Gerekli bağlantı bilgilerini topla
+    // Gather credentials
     if (mode === 'direct') {
         payload.server_ip = document.getElementById('d_ip').value.trim();
         payload.username = document.getElementById('d_user').value.trim();
@@ -45,15 +44,14 @@ function fetchLogFiles(mode) {
         payload.search_path = document.getElementById('t_search_dir').value.trim();
     }
 
-    // Basit Validasyon (Dosya listelemek için en azından IP ve Şifre lazım)
     if (!payload.server_ip || !payload.password) {
         alert("Connection Error: Please enter Server IP and Password to list files.");
         return;
     }
 
-    // Buton Görsel Geri Bildirimi
+    // UI Feedback
     const selectBox = document.getElementById(prefix + 'log_select');
-    const btn = event.target; // Tıklanan butonu al
+    const btn = event.target; 
     const originalText = btn.innerText;
     btn.innerText = 'Scanning...';
     btn.disabled = true;
@@ -66,26 +64,18 @@ function fetchLogFiles(mode) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Select box'ı temizle
             selectBox.innerHTML = '<option value="">-- Select a Log File --</option>';
-            
-            // Dosyaları ekle
             if (data.files.length > 0) {
                 data.files.forEach(file => {
-                    // Gelen dosya yolunu temizle (bazen boşluklu gelebilir)
                     let cleanFile = file.trim(); 
                     if(cleanFile) {
                         let opt = document.createElement('option');
-                        // Tam yolu oluştur: search_path + filename (veya ls çıktısı tam yol dönüyorsa direkt kullan)
-                        // Bizim backend ls -1t path* çalıştırdığı için tam yol dönmeyebilir,
-                        // ama genellikle ls path/* yapınca path/file döner.
-                        // Garanti olsun diye basitçe option text ve value'yu aynı yapıyoruz.
                         opt.value = cleanFile;
                         opt.innerText = cleanFile;
                         selectBox.appendChild(opt);
                     }
                 });
-                selectBox.style.display = 'block'; // Dropdown'ı göster
+                selectBox.style.display = 'block'; 
             } else {
                 alert("No files found in the specified directory.");
             }
@@ -104,7 +94,7 @@ function fetchLogFiles(mode) {
 }
 
 /**
- * Geçmiş analizleri (Audit Trail) yükler.
+ * Fetches and renders audit history.
  */
 function loadHistory() {
     const tbody = document.getElementById('historyTableBody');
@@ -119,8 +109,8 @@ function loadHistory() {
                 data.data.forEach(row => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td style="color:#666; font-size:0.9em;">${row.timestamp}</td>
-                        <td style="font-weight:600; color:#2c3e50;">${row.server_ip}</td>
+                        <td style="color:var(--text-muted); font-size:0.9em;">${row.timestamp}</td>
+                        <td style="font-weight:600; color:var(--text-color);">${row.server_ip}</td>
                         <td>${row.username}</td>
                         <td><span class="badge">${row.connection_mode}</span></td>
                         <td><a href="${row.report_url}" target="_blank" class="report-link">View Report ↗</a></td>
@@ -128,7 +118,7 @@ function loadHistory() {
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#95a5a6;">No analysis history found yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No analysis history found yet.</td></tr>';
             }
         })
         .catch(err => {
@@ -137,21 +127,49 @@ function loadHistory() {
         });
 }
 
-// Sayfa Yüklendiğinde
+// --- MAIN EVENT LISTENER ---
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. THEME LOGIC
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const currentTheme = localStorage.getItem('theme');
+
+    // Apply saved theme on load
+    if (currentTheme) {
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark' && themeToggleBtn) {
+            themeToggleBtn.innerText = '☀️';
+        }
+    }
+
+    // Toggle Theme Button Click
+    if(themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            let theme = document.documentElement.getAttribute('data-theme');
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                themeToggleBtn.innerText = '🌙';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                themeToggleBtn.innerText = '☀️';
+            }
+        });
+    }
+
+    // 2. LOAD HISTORY
+    loadHistory();
+
+    // 3. START ANALYSIS LOGIC
     const generateBtn = document.getElementById('generateBtn');
     const statusMsg = document.getElementById('statusMsg');
 
-    // Geçmişi yükle
-    loadHistory();
-
-    // Analiz Butonu Olayı
     generateBtn.addEventListener('click', function() {
         let payload = { connection_mode: currentMode };
         let isValid = false;
         let prefix = (currentMode === 'direct') ? 'd_' : 't_';
 
-        // Dropdown'dan seçilen dosya yolunu al
         const selectedLogPath = document.getElementById(prefix + 'log_select').value;
 
         if (currentMode === 'direct') {
@@ -163,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 payload.server_ip = ip;
                 payload.username = user;
                 payload.password = pass;
-                payload.log_path = selectedLogPath; // Dropdown'dan gelen değer
+                payload.log_path = selectedLogPath;
                 isValid = true;
             }
         } 
@@ -180,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 payload.username = user;
                 payload.env_name = env;
                 payload.password = pass;
-                payload.log_path = selectedLogPath; // Dropdown'dan gelen değer
+                payload.log_path = selectedLogPath;
                 isValid = true;
             }
         }
@@ -194,13 +212,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // UI Loading State
         generateBtn.disabled = true;
-        generateBtn.innerHTML = '<span class="loader"></span> Establishing Connection & Analyzing...';
+        generateBtn.innerHTML = '<span class="loader"></span> Analyzing...';
         statusMsg.style.display = 'none';
         statusMsg.className = 'status-box'; 
 
-        // Analiz İsteği Gönder
         fetch('/run-analysis', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -209,21 +225,14 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             statusMsg.style.display = 'block';
-            
             if (data.success) {
                 statusMsg.classList.add('success-box');
                 statusMsg.innerHTML = `
                     <div style="display:flex; align-items:center; justify-content:space-between;">
-                        <div>
-                            <strong>✔ Success</strong><br>
-                            <span style="font-size:0.9em; opacity:0.9">${data.message}</span>
-                        </div>
-                        <a href="${data.report_url}" target="_blank" style="background:#27ae60; color:white; padding:8px 16px; text-decoration:none; border-radius:4px; font-weight:bold;">View Report</a>
+                        <div><strong>✔ Success</strong><br><span style="font-size:0.9em; opacity:0.9">${data.message}</span></div>
+                        <a href="${data.report_url}" target="_blank" style="background:var(--success); color:white; padding:8px 16px; text-decoration:none; border-radius:4px; font-weight:bold;">View Report</a>
                     </div>`;
-                
-                // Tabloyu güncelle
                 loadHistory();
-                
             } else {
                 statusMsg.classList.add('error-box');
                 statusMsg.innerHTML = `<strong>⚠ Error:</strong> ${data.message}`;
@@ -233,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Request failed:', error);
             statusMsg.style.display = 'block';
             statusMsg.classList.add('error-box');
-            statusMsg.innerHTML = 'Network Error. Please check server logs.';
+            statusMsg.innerHTML = 'Network Error.';
         })
         .finally(() => {
             generateBtn.disabled = false;
