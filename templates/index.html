@@ -32,7 +32,7 @@
                 </div>
                 <div class="input-group">
                     <label>Credentials</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="flex-row">
                         <input type="text" id="d_user" placeholder="Username (e.g., root)" style="flex:1;">
                         <input type="password" id="d_pass" placeholder="Password" style="flex:1;">
                     </div>
@@ -40,11 +40,11 @@
                 
                 <div class="input-group">
                     <label>Log File Selection</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="flex-row">
                         <input type="text" id="d_search_dir" value="/var/log/postgresql/" placeholder="Base Folder Path" style="flex:1;">
-                        <button type="button" onclick="fetchLogFiles('direct')" style="padding: 10px 20px; background: #34495e; color: white; border:none; border-radius:6px; cursor:pointer;">📂 List Files</button>
+                        <button type="button" onclick="fetchLogFiles('direct')" class="list-btn">📂 List Files</button>
                     </div>
-                    <select id="d_log_select" style="width: 100%; padding: 12px; margin-top: 10px; display: none; border: 2px solid #3498db; border-radius: 6px; outline: none; font-family: 'Inter', sans-serif;">
+                    <select id="d_log_select" class="log-dropdown">
                         <option value="">-- Select a Log File --</option>
                     </select>
                 </div>
@@ -56,12 +56,14 @@
                 
                 <div class="input-group">
                     <label>Jump Host Configuration</label>
-                    <input type="text" id="t_jump" placeholder="Jump Host (e.g., ssh.proxy.net)" style="margin-bottom: 10px;">
-                    <input type="text" id="t_ip" placeholder="Target Server IP">
+                    <div class="flex-row">
+                        <input type="text" id="t_jump" placeholder="Jump Host (e.g., ssh.proxy.net)" style="flex:1;">
+                        <input type="text" id="t_ip" placeholder="Target Server IP" style="flex:1;">
+                    </div>
                 </div>
                 <div class="input-group">
                     <label>Identity Construction</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="flex-row">
                         <input type="text" id="t_user" placeholder="Username" style="flex:1;">
                         <input type="text" id="t_env" placeholder="Env Name (e.g., sys.prod)" style="flex:1;">
                     </div>
@@ -73,11 +75,11 @@
                 
                 <div class="input-group">
                     <label>Log File Selection</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="flex-row">
                         <input type="text" id="t_search_dir" value="/tmp/" placeholder="Base Folder Path" style="flex:1;">
-                        <button type="button" onclick="fetchLogFiles('tunnel')" style="padding: 10px 20px; background: #34495e; color: white; border:none; border-radius:6px; cursor:pointer;">📂 List Files</button>
+                        <button type="button" onclick="fetchLogFiles('tunnel')" class="list-btn">📂 List Files</button>
                     </div>
-                    <select id="t_log_select" style="width: 100%; padding: 12px; margin-top: 10px; display: none; border: 2px solid #3498db; border-radius: 6px; outline: none; font-family: 'Inter', sans-serif;">
+                    <select id="t_log_select" class="log-dropdown">
                         <option value="">-- Select a Log File --</option>
                     </select>
                 </div>

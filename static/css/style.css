@@ -1,19 +1,24 @@
+/* --- GLOBAL VARIABLES & RESET --- */
 :root { 
-    --primary: #2c3e50; 
-    --accent: #3498db; 
-    --success: #27ae60; 
-    --bg: #f8f9fa; 
-    --border: #e1e4e8; 
+    --primary: #2c3e50;   /* Koyu Lacivert (Başlıklar) */
+    --accent: #3498db;    /* Mavi (Vurgular/Butonlar) */
+    --dark-accent: #2980b9; /* Hover Mavi */
+    --success: #27ae60;   /* Yeşil (Başarı) */
+    --bg: #f8f9fa;        /* Açık Gri (Arka Plan) */
+    --border: #e1e4e8;    /* Gri (Kenarlıklar) */
+    --text-color: #333;
+    --text-muted: #7f8c8d;
 }
 
 body { 
     font-family: 'Inter', sans-serif; 
     background-color: var(--bg); 
     margin: 0; 
-    color: #333; 
+    color: var(--text-color); 
+    line-height: 1.6;
 }
 
-/* Header Styling */
+/* --- HEADER --- */
 .header { 
     background-color: white; 
     padding: 20px 40px; 
@@ -21,84 +26,99 @@ body {
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
+
 .logo { 
     font-weight: 600; 
     font-size: 1.2rem; 
     color: var(--primary); 
     letter-spacing: -0.5px; 
-}
-.user-info { 
-    font-size: 0.9rem; 
-    color: #7f8c8d; 
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-/* Container & Layout */
+.user-info { 
+    font-size: 0.9rem; 
+    color: var(--text-muted); 
+    font-weight: 500;
+}
+
+/* --- LAYOUT --- */
 .container { 
     max-width: 900px; 
     margin: 40px auto; 
     padding: 0 20px; 
 }
 
-/* Tab Navigation */
-.tabs { 
-    display: flex; 
-    border-bottom: 2px solid var(--border); 
-    margin-bottom: 30px; 
-}
-.tab-btn { 
-    padding: 15px 25px; 
-    cursor: pointer; 
-    font-weight: 600; 
-    color: #7f8c8d; 
-    border-bottom: 3px solid transparent; 
-    transition: all 0.3s;
-}
-.tab-btn:hover { 
-    color: var(--accent); 
-    background-color: rgba(52, 152, 219, 0.05); 
-}
-.tab-btn.active { 
-    color: var(--accent); 
-    border-bottom-color: var(--accent); 
-}
-
-/* Action Panel Cards */
+/* --- ACTION PANEL (MAIN CARD) --- */
 .action-panel { 
     background: white; 
     padding: 40px; 
     border-radius: 12px; 
     box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
     text-align: center; 
+    border: 1px solid var(--border);
 }
+
 h1 { 
     margin-top: 0; 
     color: var(--primary); 
     font-size: 1.8rem; 
 }
+
 .desc { 
     color: #666; 
     margin-bottom: 30px; 
-    line-height: 1.6; 
 }
 
-/* Form Sections & Animation */
+/* --- TABS NAVIGATION --- */
+.tabs { 
+    display: flex; 
+    border-bottom: 2px solid var(--border); 
+    margin-bottom: 30px; 
+}
+
+.tab-btn { 
+    padding: 15px 25px; 
+    cursor: pointer; 
+    font-weight: 600; 
+    color: var(--text-muted); 
+    border-bottom: 3px solid transparent; 
+    transition: all 0.3s;
+    flex: 1; /* Butonları eşit yayar */
+    text-align: center;
+}
+
+.tab-btn:hover { 
+    color: var(--accent); 
+    background-color: rgba(52, 152, 219, 0.05); 
+}
+
+.tab-btn.active { 
+    color: var(--accent); 
+    border-bottom-color: var(--accent); 
+}
+
+/* --- FORM SECTIONS & INPUTS --- */
 .form-section { 
     display: none; 
-    animation: fadeIn 0.3s; 
+    animation: fadeIn 0.3s ease-in-out; 
 }
+
 .form-section.active { 
     display: block; 
 }
 
-/* Input Fields */
 .input-group { 
     margin-bottom: 20px; 
     text-align: left; 
-    max-width: 450px; 
+    max-width: 500px; /* Genişlik ayarı */
     margin-left: auto; 
     margin-right: auto; 
 }
+
 .input-group label { 
     display: block; 
     margin-bottom: 8px; 
@@ -106,6 +126,7 @@ h1 {
     color: var(--primary); 
     font-size: 0.9rem; 
 }
+
 .input-group input { 
     width: 100%; 
     padding: 12px; 
@@ -116,12 +137,20 @@ h1 {
     transition: border-color 0.2s; 
     box-sizing: border-box;
     font-family: 'Inter', sans-serif; 
+    color: var(--primary);
 }
+
 .input-group input:focus { 
     border-color: var(--accent); 
 }
 
-/* Action Button */
+.input-group input::placeholder { 
+    color: #bdc3c7; 
+}
+
+/* --- BUTTONS --- */
+
+/* Main CTA (Start Analysis) */
 button.cta { 
     background-color: var(--accent); 
     color: white; 
@@ -134,18 +163,94 @@ button.cta {
     transition: all 0.2s; 
     box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2); 
     margin-top: 20px; 
+    width: 100%;
+    max-width: 300px;
 }
+
 button.cta:hover { 
     transform: translateY(-2px); 
     box-shadow: 0 6px 12px rgba(52, 152, 219, 0.3); 
+    background-color: var(--dark-accent);
 }
+
 button.cta:disabled { 
     background-color: #bdc3c7; 
     transform: none; 
     cursor: wait; 
+    box-shadow: none;
 }
 
-/* Status Messages */
+/* List Files Button (Secondary) */
+.list-btn {
+    padding: 12px 20px;
+    background-color: #34495e; /* Midnight Blue */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.list-btn:hover {
+    background-color: #2c3e50;
+}
+
+.list-btn:disabled {
+    background-color: #95a5a6;
+    cursor: wait;
+}
+
+/* Refresh Button (History) */
+.refresh-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 6px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.refresh-btn:hover {
+    background: var(--bg);
+    color: var(--primary);
+    border-color: #bdc3c7;
+}
+
+/* --- LOG DISCOVERY & UTILS --- */
+.flex-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.log-dropdown {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    display: none; /* Hidden by default */
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+    background-color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    color: var(--primary);
+}
+
+.log-dropdown:focus {
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+/* --- STATUS MESSAGES --- */
 .status-box { 
     margin-top: 30px; 
     padding: 20px; 
@@ -153,39 +258,29 @@ button.cta:disabled {
     display: none; 
     text-align: left; 
     font-size: 0.95rem; 
+    line-height: 1.5;
 }
+
 .success-box { 
     background-color: #e8f8f5; 
     border: 1px solid #a2d9ce; 
     color: #145a32; 
 }
+
 .error-box { 
     background-color: #fdedec; 
     border: 1px solid #fadbd8; 
     color: #922b21; 
 }
 
-/* Footer */
-.footer { 
-    text-align: center; 
-    margin-top: 50px; 
-    color: #bdc3c7; 
-    font-size: 0.8rem; 
-}
-
-/* Keyframes */
-@keyframes fadeIn { 
-    from { opacity: 0; transform: translateY(5px); } 
-    to { opacity: 1; transform: translateY(0); } 
-}
-
-/* HISTORY TABLE STYLES */
+/* --- HISTORY TABLE --- */
 .history-panel {
     background: white;
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    margin-top: 30px; /* Action panel ile arasına mesafe koyduk */
+    margin-top: 30px;
+    border: 1px solid var(--border);
 }
 
 .history-header {
@@ -203,22 +298,6 @@ button.cta:disabled {
     color: var(--primary);
 }
 
-.refresh-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    padding: 6px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #7f8c8d;
-    transition: all 0.2s;
-    font-size: 0.85rem;
-}
-.refresh-btn:hover {
-    background: var(--bg);
-    color: var(--primary);
-    border-color: #bdc3c7;
-}
-
 .table-responsive {
     overflow-x: auto;
 }
@@ -233,7 +312,7 @@ button.cta:disabled {
     text-align: left;
     padding: 15px;
     background-color: #f8f9fa;
-    color: #7f8c8d;
+    color: var(--text-muted);
     font-weight: 600;
     border-bottom: 2px solid var(--border);
 }
@@ -241,21 +320,28 @@ button.cta:disabled {
 .history-table td {
     padding: 15px;
     border-bottom: 1px solid var(--border);
-    color: #333;
+    color: var(--text-color);
+    white-space: nowrap;
 }
 
 .history-table tr:last-child td {
     border-bottom: none;
 }
 
+.history-table tr:hover td {
+    background-color: #fcfcfc;
+}
+
+/* Badges & Links */
 .badge {
     background-color: #eef2f7;
     color: #57606f;
     padding: 4px 10px;
     border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .report-link {
@@ -264,7 +350,23 @@ button.cta:disabled {
     font-weight: 600;
     transition: color 0.2s;
 }
+
 .report-link:hover {
-    color: #2980b9;
+    color: var(--dark-accent);
     text-decoration: underline;
+}
+
+/* --- FOOTER --- */
+.footer { 
+    text-align: center; 
+    margin-top: 50px; 
+    color: #bdc3c7; 
+    font-size: 0.8rem; 
+    margin-bottom: 20px;
+}
+
+/* --- ANIMATIONS --- */
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(5px); } 
+    to { opacity: 1; transform: translateY(0); } 
 }
