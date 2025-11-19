@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PELA | PostgreSQL Log Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">⚡ PELA | PostgreSQL Log Analyzer</div>
+        <div class="user-info">System Status: <span style="color: #27ae60;">● Online</span></div>
+    </div>
+
+    <div class="container">
+        
+        <div class="action-panel">
+            <div class="tabs">
+                <div class="tab-btn active" onclick="switchTab('direct')">Direct Connection</div>
+                <div class="tab-btn" onclick="switchTab('tunnel')">Jump Host Tunnel</div>
+            </div>
+
+            <div id="direct-section" class="form-section active">
+                <h1>Direct SSH Analysis</h1>
+                <p class="desc">Connect directly to a PostgreSQL server via SSH.</p>
+                
+                <div class="input-group">
+                    <label>Target Server</label>
+                    <input type="text" id="d_ip" placeholder="IP Address (e.g., 192.168.1.50)">
+                </div>
+                <div class="input-group">
+                    <label>Credentials</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="d_user" placeholder="Username (e.g., root)" style="flex:1;">
+                        <input type="password" id="d_pass" placeholder="Password" style="flex:1;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Log Path</label>
+                    <input type="text" id="d_path" value="/var/log/postgresql.log" placeholder="Full path to log file">
+                </div>
+            </div>
+
+            <div id="tunnel-section" class="form-section">
+                <h1>Enterprise Tunnel Analysis</h1>
+                <p class="desc">Securely tunnel through a Jump Host using PAM/Vault credentials.</p>
+                
+                <div class="input-group">
+                    <label>Jump Host Configuration</label>
+                    <input type="text" id="t_jump" placeholder="Jump Host (e.g., ssh.proxy.net)" style="margin-bottom: 10px;">
+                    <input type="text" id="t_ip" placeholder="Target Server IP">
+                </div>
+                <div class="input-group">
+                    <label>Identity Construction</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="t_user" placeholder="Username" style="flex:1;">
+                        <input type="text" id="t_env" placeholder="Env Name (e.g., sys.prod)" style="flex:1;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Authentication</label>
+                    <input type="password" id="t_pass" placeholder="Vault/PAM Password">
+                </div>
+                <div class="input-group">
+                    <label>Log Path</label>
+                    <input type="text" id="t_path" value="/tmp/postgresql-Wed.log" placeholder="Full path to log file">
+                </div>
+            </div>
+            
+            <button id="generateBtn" class="cta">Start Analysis</button>
+            <div id="statusMsg" class="status-box"></div>
+        </div>
+        
+        <div class="history-panel">
+            <div class="history-header">
+                <h2>📊 Audit History</h2>
+                <button onclick="loadHistory()" class="refresh-btn">↻ Refresh</button>
+            </div>
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Server IP</th>
+                            <th>User</th>
+                            <th>Mode</th>
+                            <th>Report</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr><td colspan="5" style="text-align:center;">Loading history...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>PELA v1.1.1 | Developer - Eryo | Using - pgBadger</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>
