@@ -1,30 +1,30 @@
 /* --- GLOBAL VARIABLES (LIGHT MODE DEFAULT) --- */
 :root { 
-    --primary: #2c3e50;       /* Koyu Lacivert (Başlıklar) */
-    --accent: #3498db;        /* Mavi (Butonlar) */
-    --dark-accent: #2980b9;   /* Hover Mavi */
-    --success: #27ae60;       /* Yeşil */
-    --bg: #f8f9fa;            /* Arka Plan */
-    --card-bg: #ffffff;       /* Kart Arka Planı */
-    --border: #e1e4e8;        /* Kenarlıklar */
-    --text-color: #333333;    /* Ana Metin */
-    --text-muted: #7f8c8d;    /* Silik Metin */
-    --input-bg: #ffffff;      /* Input Arka Planı */
+    --primary: #2c3e50;       /* Dark Navy (Headers) */
+    --accent: #3498db;        /* Blue (Buttons) */
+    --dark-accent: #2980b9;   /* Darker Blue (Hover) */
+    --success: #27ae60;       /* Green (Success) */
+    --bg: #f8f9fa;            /* Light Background */
+    --card-bg: #ffffff;       /* Card Background */
+    --border: #e1e4e8;        /* Borders */
+    --text-color: #333333;    /* Main Text */
+    --text-muted: #7f8c8d;    /* Muted Text */
+    --input-bg: #ffffff;      /* Input Background */
     --header-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 /* --- DARK MODE OVERRIDES --- */
 [data-theme="dark"] {
-    --primary: #ecf0f1;       /* Beyazımsı (Başlıklar) */
-    --accent: #3498db;        /* Mavi */
-    --dark-accent: #5dade2;   /* Hover daha açık mavi */
-    --success: #2ecc71;       /* Parlak Yeşil */
-    --bg: #121212;            /* Çok Koyu Gri (Arka Plan) */
-    --card-bg: #1e1e1e;       /* Koyu Gri (Kartlar) */
-    --border: #333333;        /* Koyu Kenarlıklar */
-    --text-color: #e0e0e0;    /* Açık Gri Metin */
-    --text-muted: #a0a0a0;    /* Silik Metin */
-    --input-bg: #2d2d2d;      /* Koyu Input */
+    --primary: #ecf0f1;       /* Off-White (Headers) */
+    --accent: #3498db;        /* Blue */
+    --dark-accent: #5dade2;   /* Lighter Blue (Hover) */
+    --success: #2ecc71;       /* Bright Green */
+    --bg: #121212;            /* Very Dark Gray (Background) */
+    --card-bg: #1e1e1e;       /* Dark Gray (Cards) */
+    --border: #333333;        /* Dark Borders */
+    --text-color: #e0e0e0;    /* Light Gray Text */
+    --text-muted: #a0a0a0;    /* Muted Text */
+    --input-bg: #2d2d2d;      /* Dark Input */
     --header-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
