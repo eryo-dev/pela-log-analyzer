@@ -65,8 +65,8 @@ Before running PELA locally (without Docker), ensure you have:
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/eryo-dev/pela.git](https://github.com/eryo-dev/pela.git)
-    cd pela
+    git clone https://github.com/eryo-dev/pela-log-analyzer
+    cd pela-log-analyzer
     ```
 
 2.  **Configure Timezone (Optional):**

@@ -28,10 +28,10 @@ To start contributing, you need to set up the project locally.
 ### Local Setup
 
 1. **Fork and Clone** the repository:
-   ```bash
-   git clone [https://github.com/eryo-dev/pela.git](https://github.com/eryo-dev/pela.git)
-   cd pela
-````
+  ```bash
+    git clone https://github.com/eryo-dev/pela-log-analyzer.git
+    cd pela-log-analyzer
+  ````
 
 2.  **Set up a Virtual Environment:**
 
