@@ -17,3 +17,9 @@ static/reports/*
 # Sensitive Info
 .env
 .config
+
+# Exceptions
+data/*.db
+data/logs/*
+static/reports/*
+!static/reports/.gitkeep
