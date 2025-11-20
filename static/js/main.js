@@ -131,6 +131,7 @@ function loadHistory() {
 document.addEventListener('DOMContentLoaded', function() {
     
     //Preloads
+    loadSettings();
     loadSchedules();
     loadHistory();
     fetchProfiles();
@@ -438,4 +439,32 @@ function scheduleTask() {
         alert(data.message);
         loadSchedules();
     });
+}
+
+function saveSettings() {
+    const url = document.getElementById('webhookUrl').value.trim();
+    if (!url) {
+        alert("Please enter a Webhook URL.");
+        return;
+    }
+
+    fetch('/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhook_url: url })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+    });
+}
+
+function loadSettings() {
+    fetch('/settings')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.webhook_url) {
+                document.getElementById('webhookUrl').value = data.webhook_url;
+            }
+        });
 }

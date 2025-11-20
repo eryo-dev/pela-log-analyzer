@@ -7,6 +7,8 @@ import sqlite3
 from datetime import datetime
 from flask_apscheduler import APScheduler
 import atexit
+import requests
+import json
 
 app = Flask(__name__)
 
@@ -31,10 +33,12 @@ os.makedirs(LOG_FOLDER, exist_ok=True)
 
 # --- DATABASE SETUP ---
 def init_db():
-    """Creates the audit_log table if it doesn't exist."""
+    """Creates the database tables if they don't exist."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
+            
+            # Table: Audit Logs
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS audit_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,18 +50,28 @@ def init_db():
                 )
             ''')
 
+            # Table: Saved Profiles
             cursor.execute('''
-            CREATE TABLE IF NOT EXISTS saved_profiles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                profile_name TEXT NOT NULL UNIQUE,
-                connection_mode TEXT NOT NULL,
-                server_ip TEXT NOT NULL,
-                username TEXT,
-                jump_host TEXT,
-                env_name TEXT,
-                log_path TEXT
-            )
-        ''')
+                CREATE TABLE IF NOT EXISTS saved_profiles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    profile_name TEXT NOT NULL UNIQUE,
+                    connection_mode TEXT NOT NULL,
+                    server_ip TEXT NOT NULL,
+                    username TEXT,
+                    jump_host TEXT,
+                    env_name TEXT,
+                    log_path TEXT
+                )
+            ''')
+            
+            # Table: System Settings (e.g., Webhooks)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                )
+            ''')
+            
             conn.commit()
     except Exception as e:
         print(f"Init DB Error: {e}")
@@ -89,7 +103,7 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
-# Uygulama kapanırken scheduler'ı temiz kapat
+# Shut down the scheduler cleanly when the app exits
 atexit.register(lambda: scheduler.shutdown())
 
 # --- SSH HELPER FUNCTION ---
@@ -156,11 +170,62 @@ def create_ssh_client(mode, data):
     else:
         raise ValueError("Invalid connection mode")
 
+def send_teams_notification(status, ip, message, report_url=None):
+    """
+    Fetches the Webhook URL from the DB and sends a styled card to Teams.
+    """
+    try:
+        # 1. Get Webhook URL from DB
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM settings WHERE key = 'teams_webhook'")
+            row = cursor.fetchone()
+            
+        if not row:
+            return # Exit silently if not configured
+
+        webhook_url = row[0]
+        
+        # 2. Card Color and Title (Based on Success/Failure)
+        theme_color = "00FF00" if status == 'success' else "FF0000" # Green or Red
+        title = f"✅ PELA Analysis Success: {ip}" if status == 'success' else f"❌ PELA Analysis Failed: {ip}"
+        
+        # 3. Message Card (JSON Payload)
+        payload = {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": theme_color,
+            "summary": title,
+            "sections": [{
+                "activityTitle": title,
+                "activitySubtitle": f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "text": message,
+                "markdown": True
+            }]
+        }
+
+        # Add button if report link exists
+        if report_url:
+            # Note: Localhost links might not work from Teams, but work in Docker/Server environments.
+            # Adding a representative button here.
+            payload["potentialAction"] = [{
+                "@type": "OpenUri",
+                "name": "View Report",
+                "targets": [{"os": "default", "uri": "http://YOUR_SERVER_IP:5000/" + report_url}]
+            }]
+
+        # 4. Send
+        headers = {'Content-Type': 'application/json'}
+        requests.post(webhook_url, data=json.dumps(payload), headers=headers)
+        print(">> Teams notification sent.")
+
+    except Exception as e:
+        print(f"Teams Notification Error: {e}")
 
 def core_analysis_task(data_payload):
     """
-    Bu fonksiyon hem HTTP isteği hem de Zamanlayıcı tarafından çağrılabilir.
-    Parametre olarak gerekli tüm bağlantı verilerini (şifre dahil) alır.
+    This function can be triggered by both HTTP requests and the Scheduler. 
+    Receives all connection data (including password) as parameters.
     """
     client = None
     jump_client = None
@@ -169,14 +234,132 @@ def core_analysis_task(data_payload):
     mode = data_payload.get('connection_mode')
     remote_path = data_payload.get('log_path')
     
-    # Audit Log için 'Scheduled' modunu belirtelim
+    # Specify 'Scheduled' mode for Audit Log
     audit_mode = f"{mode} (Auto)" if data_payload.get('is_scheduled') else mode
 
+# --- 🛠️ GELİŞMİŞ SİMÜLASYON MODU ---
+    if ip == 'TEST':
+        print(f" >> [SIMULATION] {datetime.now()}: Test senaryosu başlatıldı.")
+        
+        timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
+        readable_date = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+        fake_report_name = f"simulation_report_{timestamp_str}.html"
+        fake_report_path = os.path.join(REPORT_FOLDER, fake_report_name)
+        
+        # Profesyonel Görünümlü HTML Şablonu (Mock Data)
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>PELA - Simulation Report</title>
+            <style>
+                body {{ font-family: 'Segoe UI', sans-serif; background: #f4f6f9; padding: 20px; }}
+                .container {{ max-width: 1000px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }}
+                h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
+                .summary {{ display: flex; gap: 20px; margin-bottom: 30px; }}
+                .card {{ background: #ecf0f1; padding: 20px; border-radius: 8px; flex: 1; text-align: center; }}
+                .card h3 {{ margin: 0; font-size: 2em; color: #27ae60; }}
+                .card p {{ margin: 5px 0 0; color: #7f8c8d; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+                th {{ background: #34495e; color: white; padding: 12px; text-align: left; }}
+                td {{ padding: 12px; border-bottom: 1px solid #eee; }}
+                tr:hover {{ background-color: #f8f9fa; }}
+                .tag {{ padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }}
+                .slow {{ background: #fadbd8; color: #c0392b; }}
+                .ok {{ background: #d4efdf; color: #27ae60; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>PostgreSQL Health Check Report (SIMULATION)</h1>
+                <p><strong>Server:</strong> TEST_SERVER_01 | <strong>Date:</strong> {readable_date} | <strong>Generated by:</strong> PELA v1.2.0</p>
+                
+                <div class="summary">
+                    <div class="card">
+                        <h3>98.5%</h3>
+                        <p>Cache Hit Ratio</p>
+                    </div>
+                    <div class="card">
+                        <h3>12</h3>
+                        <p>Active Sessions</p>
+                    </div>
+                    <div class="card">
+                        <h3 style="color: #e74c3c;">2</h3>
+                        <p>Slow Queries (>1s)</p>
+                    </div>
+                </div>
+
+                <h2>🚨 Top Slowest Queries</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Duration</th>
+                            <th>Database</th>
+                            <th>User</th>
+                            <th>Query Snippet</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>1.245 ms</strong></td>
+                            <td>finance_db</td>
+                            <td>app_user</td>
+                            <td><code>SELECT * FROM transactions WHERE date < '2020-01-01'</code></td>
+                            <td><span class="tag slow">CRITICAL</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>0.890 ms</strong></td>
+                            <td>finance_db</td>
+                            <td>report_bot</td>
+                            <td><code>SELECT count(*) FROM logs GROUP BY type</code></td>
+                            <td><span class="tag slow">WARNING</span></td>
+                        </tr>
+                        <tr>
+                            <td>0.045 ms</td>
+                            <td>auth_db</td>
+                            <td>admin</td>
+                            <td><code>UPDATE users SET last_login = NOW() WHERE id = 55</code></td>
+                            <td><span class="tag ok">OK</span></td>
+                        </tr>
+                        <tr>
+                            <td>0.012 ms</td>
+                            <td>postgres</td>
+                            <td>postgres</td>
+                            <td><code>SELECT 1</code></td>
+                            <td><span class="tag ok">OK</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p style="margin-top: 30px; color: #999; font-size: 0.8em; text-align: center;">
+                    This is a generated simulation report for testing PELA capabilities.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # HTML dosyasını oluştur
+        with open(fake_report_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+
+        # Veritabanına kaydet (Web URL formatında)
+        web_report_url = f"static/reports/{fake_report_name}"
+        add_audit_log(ip, user, audit_mode, web_report_url)
+        
+        # Teams Bildirimi (Opsiyonel - Ayarladıysan çalışır)
+        send_teams_notification('success', ip, f"Simulation Report Generated. Duration: 0.4s", web_report_url)
+        
+        return {'success': True, 'report_url': web_report_url}
+        # --- SİMÜLASYON MODU SONU ---
+        # ----------------------------
+        # --- GERÇEK ANALİZ AKIŞI ---
     try:
-        # 1. Bağlantı
+        # 1. Connection
         client, jump_client = create_ssh_client(mode, data_payload)
         
-        # 2. Dosya Çekme
+        # 2. File Retrieval
         local_filename = f"{ip}_{os.path.basename(remote_path)}"
         local_file_path = os.path.join(LOG_FOLDER, local_filename)
         command_to_run = f"sudo /bin/cat {shlex.quote(remote_path)}"
@@ -190,11 +373,11 @@ def core_analysis_task(data_payload):
         with open(local_file_path, 'w', encoding='utf-8') as f:
             f.write(log_content)
             
-        # Bağlantıları kapat
+        # Close connections
         client.close()
         if jump_client: jump_client.close()
 
-        # 3. Analiz
+        # 3. Analysis
         timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
         report_filename = f"report_{ip}_{timestamp_str}.html"
         output_path = os.path.join(REPORT_FOLDER, report_filename)
@@ -207,14 +390,18 @@ def core_analysis_task(data_payload):
         process = subprocess.run(command, capture_output=True, text=True)
 
         if process.returncode == 0:
-            # DB'ye Kaydet
+            # Save to DB
             add_audit_log(ip, user, audit_mode, web_report_url)
+            # Teams Notification
+            send_teams_notification('success', ip, 'The analysis completed successfully.', web_report_url)
             return {'success': True, 'report_url': web_report_url}
         else:
             return {'success': False, 'message': process.stderr}
-
+            
     except Exception as e:
+        send_teams_notification('failed', ip, f"Analysis Error: {str(e)}")
         return {'success': False, 'message': str(e)}
+    
 
 # --- ROUTES ---
 
@@ -235,28 +422,51 @@ def get_history():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-# --- PROFILE MANAGEMENT ROUTES (YENİ EKLENEN KISIM) ---
+# --- SETTINGS ROUTES (TEAMS) ---
+@app.route('/settings', methods=['POST', 'GET'])
+def manage_settings():
+    """Manages system settings (e.g., Webhook URL)."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            
+            if request.method == 'POST':
+                data = request.get_json()
+                webhook = data.get('webhook_url')
+                # UPSERT Logic (Update if exists, else Insert)
+                cursor.execute("REPLACE INTO settings (key, value) VALUES ('teams_webhook', ?)", (webhook,))
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Settings saved.'})
+            
+            elif request.method == 'GET':
+                cursor.execute("SELECT value FROM settings WHERE key = 'teams_webhook'")
+                row = cursor.fetchone()
+                return jsonify({'success': True, 'webhook_url': row[0] if row else ''})
+                
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
+# --- PROFILE MANAGEMENT ROUTES ---
 @app.route('/profiles', methods=['GET', 'POST', 'DELETE'])
 def manage_profiles():
-    """Profil kaydetme, listeleme ve silme işlemleri."""
+    """Handles profile saving, listing, and deletion."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # 1. GET: Profilleri Listele
+            # 1. GET: List Profiles
             if request.method == 'GET':
                 cursor.execute("SELECT * FROM saved_profiles ORDER BY profile_name ASC")
                 profiles = [dict(row) for row in cursor.fetchall()]
                 return jsonify({'success': True, 'data': profiles})
 
-            # 2. POST: Yeni Profil Kaydet
+            # 2. POST: Save New Profile
             if request.method == 'POST':
                 data = request.get_json()
                 name = data.get('profile_name')
                 
-                # Aynı isimde varsa üzerine yaz (UPSERT mantığı yerine DELETE+INSERT basitliği)
+                # Overwrite if exists (DELETE+INSERT simplicity instead of UPSERT logic)
                 cursor.execute("DELETE FROM saved_profiles WHERE profile_name = ?", (name,))
                 
                 cursor.execute('''
@@ -271,7 +481,7 @@ def manage_profiles():
                 conn.commit()
                 return jsonify({'success': True, 'message': f'Profile "{name}" saved.'})
 
-            # 3. DELETE: Profil Sil
+            # 3. DELETE: Delete Profile
             if request.method == 'DELETE':
                 profile_id = request.args.get('id')
                 cursor.execute("DELETE FROM saved_profiles WHERE id = ?", (profile_id,))
@@ -321,18 +531,18 @@ def list_files():
 
 @app.route('/schedule', methods=['POST', 'GET', 'DELETE'])
 def manage_schedule():
-    """Zamanlanmış görevleri yönetir."""
+    """Manages scheduled tasks."""
     if request.method == 'POST':
-        # Yeni görev ekle
+        # Add new task
         data = request.get_json()
         job_id = f"job_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
-        # Veriye 'is_scheduled' bayrağı ekle
+        # Add 'is_scheduled' flag to data
         task_data = data.copy()
         task_data['is_scheduled'] = True
         
-        # Görevi ekle (Varsayılan: Her gün belirtilen saatte)
-        # data['hour'] ve data['minute'] frontend'den gelecek
+        # Add job (Default: Daily at specified time)
+        # data['hour'] and data['minute'] come from frontend
         scheduler.add_job(
             id=job_id,
             func=core_analysis_task,
@@ -344,10 +554,10 @@ def manage_schedule():
         return jsonify({'success': True, 'message': 'Task Scheduled!'})
 
     elif request.method == 'GET':
-        # Görevleri Listele
+        # List Tasks
         jobs = []
         for job in scheduler.get_jobs():
-            # Job argümanlarından hedef IP'yi çekip gösterelim
+            # Extract target IP from job arguments for display
             target = job.args[0].get('server_ip') if job.args else 'Unknown'
             next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M") if job.next_run_time else 'N/A'
             jobs.append({'id': job.id, 'target': target, 'next_run': next_run})
@@ -361,7 +571,7 @@ def manage_schedule():
 @app.route('/run-analysis', methods=['POST'])
 def run_analysis():
     data = request.get_json()
-    # Helper fonksiyonu çağır
+    # Call helper function
     result = core_analysis_task(data)
     
     if result['success']:

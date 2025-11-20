@@ -120,6 +120,14 @@
                     <ul id="jobsUl" style="list-style: none; padding: 0; margin-top: 5px;">
                         </ul>
                 </div>
+                
+                <div style="margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 20px;">
+                <h3 style="color: var(--primary); font-size: 1.1rem;">🔔 Notifications (Teams)</h3>
+                <div class="flex-row">
+                    <input type="text" id="webhookUrl" placeholder="Paste Teams Webhook URL here..." style="flex:1;">
+                    <button onclick="saveSettings()" class="list-btn" style="background-color: #8e44ad;">Save</button>
+                </div>
+            </div>
             </div>
 
             <div id="statusMsg" class="status-box"></div>
