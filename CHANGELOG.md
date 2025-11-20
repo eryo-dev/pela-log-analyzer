@@ -2,7 +2,7 @@
 
 All notable changes to the "PELA" project will be documented in this file.
 
-## [v1.5.1] - 2025-11-20
+## [v1.5.2] - 2025-11-20
 ### Added
  - **File Updates:** Updated .gitignore.
 
