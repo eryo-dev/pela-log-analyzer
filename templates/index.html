@@ -22,15 +22,14 @@
     <div class="container">
         
         <div class="action-panel">
+            
             <div class="profile-manager">
                 <label class="profile-label">📂 Load Profile:</label>
-                
                 <div class="select-wrapper">
                     <select id="profileSelect" onchange="loadProfileData()" class="profile-select">
                         <option value="">-- Select Saved Profile --</option>
                     </select>
                 </div>
-
                 <button onclick="deleteProfile()" class="btn-delete" title="Delete Selected Profile">🗑️</button>
             </div>
 
@@ -62,9 +61,11 @@
                         <input type="text" id="d_search_dir" value="/var/log/postgresql/" placeholder="Base Folder Path" style="flex:1;">
                         <button type="button" onclick="fetchLogFiles('direct')" class="list-btn">📂 List Files</button>
                     </div>
-                    <select id="d_log_select" class="log-dropdown">
-                        <option value="">-- Select a Log File --</option>
-                    </select>
+                    <div class="select-wrapper" style="width: 100%; margin-top: 10px;">
+                        <select id="d_log_select" class="profile-select">
+                            <option value="">-- Select a Log File --</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -94,12 +95,14 @@
                 <div class="input-group">
                     <label>Log File Selection</label>
                     <div class="flex-row">
-                        <input type="text" id="t_search_dir" value="/tmp/" placeholder="Base Folder Path" style="flex:1;">
+                        <input type="text" id="t_search_dir" value="/var/log/" placeholder="Base Folder Path" style="flex:1;">
                         <button type="button" onclick="fetchLogFiles('tunnel')" class="list-btn">📂 List Files</button>
                     </div>
-                    <select id="t_log_select" class="log-dropdown">
-                        <option value="">-- Select a Log File --</option>
-                    </select>
+                    <div class="select-wrapper" style="width: 100%; margin-top: 10px;">
+                        <select id="t_log_select" class="profile-select">
+                            <option value="">-- Select a Log File --</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -109,12 +112,10 @@
                         <h3>📅 Daily Analysis Trend</h3>
                         <canvas id="activityChart"></canvas>
                     </div>
-                    
                     <div class="chart-card">
                         <h3>🏆 Top Servers</h3>
                         <canvas id="serversChart"></canvas>
                     </div>
-
                     <div class="chart-card">
                         <h3>🔗 Connection Types</h3>
                         <canvas id="modesChart"></canvas>
@@ -123,36 +124,39 @@
             </div>
             
             <button id="generateBtn" class="cta">Start Analysis</button>
-            <button type="button" onclick="saveProfile()" class="btn-save">💾 Save Current Settings as Profile</button>
+            
+            <button type="button" onclick="saveProfile()" class="btn-save">
+                💾 Save Current Settings as Profile
+            </button>
+
+            <div id="statusMsg" class="status-box"></div>
 
             <div style="margin-top: 30px; border-top: 1px dashed var(--border); padding-top: 20px;">
                 <h3 style="color: var(--primary); font-size: 1.1rem;">⏰ Automation</h3>
                 
                 <div class="flex-row" style="justify-content: center; margin-bottom: 15px;">
                     <label style="color: var(--text-muted);">Run Daily At:</label>
-                    <input type="number" id="sched_hour" placeholder="HH" min="0" max="23" style="width: 60px; padding: 8px; border-radius: 4px; border: 1px solid var(--border);">
+                    <input type="number" id="sched_hour" placeholder="HH" min="0" max="23" style="width: 60px; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background-color: var(--input-bg); color: var(--text-color);">
                     <span>:</span>
-                    <input type="number" id="sched_min" placeholder="MM" min="0" max="59" style="width: 60px; padding: 8px; border-radius: 4px; border: 1px solid var(--border);">
+                    <input type="number" id="sched_min" placeholder="MM" min="0" max="59" style="width: 60px; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background-color: var(--input-bg); color: var(--text-color);">
                     
                     <button onclick="scheduleTask()" class="list-btn" style="background-color: var(--success);">+ Schedule Task</button>
                 </div>
 
-                <div id="activeJobsList" style="text-align: left; background: var(--bg); padding: 10px; border-radius: 6px; font-size: 0.9rem;">
+                <div id="activeJobsList" style="text-align: left; background: var(--bg); padding: 10px; border-radius: 6px; font-size: 0.9rem; border: 1px solid var(--border);">
                     <small style="color: var(--text-muted);">Active Jobs:</small>
                     <ul id="jobsUl" style="list-style: none; padding: 0; margin-top: 5px;">
                         </ul>
                 </div>
+            </div>
 
-                <div style="margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 20px;">
+            <div style="margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 20px;">
                 <h3 style="color: var(--primary); font-size: 1.1rem;">🔔 Notifications (Teams)</h3>
                 <div class="flex-row">
                     <input type="text" id="webhookUrl" placeholder="Paste Teams Webhook URL here..." style="flex:1;">
                     <button onclick="saveSettings()" class="list-btn" style="background-color: #8e44ad;">Save</button>
                 </div>
             </div>
-            </div>
-
-            <div id="statusMsg" class="status-box"></div>
         </div>
 
         <div class="history-panel">
@@ -179,7 +183,7 @@
         </div>
 
         <div class="footer">
-            <p>PELA v1.3.0 | Developer - Eryo | Using - pgBadger</p>
+            <p>PELA v1.5.0 | Developer - Eryo | Using - pgBadger</p>
             <p><a href="https://github.com/darold/pgbadger" style="opacity: 80%;">pgBadger Repo</a></p>
             <p><a href="https://github.com/eryo-dev/pela-log-analyzer" style="opacity: 80%;">PELA Repo</a></p>
         </div>

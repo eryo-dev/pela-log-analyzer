@@ -1,29 +1,40 @@
-# 1. Base Image: Python 3.9'un hafif sürümünü kullan (Debian tabanlı)
+# 1. Base Image: Lightweight Python
 FROM python:3.9-slim
 
-# 2. Sistem Paketleri: pgBadger Perl ile çalıştığı için Perl'ü kuruyoruz
-#    Ayrıca ping ve ssh araçlarını da debug için ekliyoruz
+# 2. Install System Dependencies
+# - perl: Required for pgBadger engine
+# - openssh-client: Required for SSH tunneling and file transfer
 RUN apt-get update && apt-get install -y \
     perl \
     openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Çalışma Dizini: Konteyner içindeki ana klasörümüz
+# 3. Set Working Directory
 WORKDIR /app
 
-# 4. Bağımlılıklar: Önce requirements.txt'yi kopyala ve kur (Cache optimizasyonu için)
+# 4. Install Python Dependencies
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Kodları Taşı: Projedeki tüm dosyaları konteynere kopyala
+# 5. Copy Application Code
 COPY . .
 
-# 6. Port: Flask'ın portunu dışarıya duyur
+# 6. Permissions
+# Make the pgBadger script executable (Critical for Linux containers)
+RUN chmod +x tools/pgbadger.pl
+
+# 7. Environment Variables
+# Tell Flask it's running inside Docker
 ENV FLASK_HOST=0.0.0.0
+# Ensure Python logs are streamed immediately (not buffered)
+ENV PYTHONUNBUFFERED=1
+
+# 8. Expose Port
 EXPOSE 5000
 
-# 7. Volume: Data ve Static klasörleri için yer tutucu (Opsiyonel ama iyi pratik)
+# 9. Volumes (Data Persistence placeholders)
 VOLUME ["/app/data", "/app/static/reports"]
 
-# 8. Başlatma Komutu
+# 10. Start Command
 CMD ["python", "app.py"]

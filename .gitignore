@@ -1,21 +1,22 @@
-# Python
+# Python & Environment
 venv/
 __pycache__/
 *.pyc
 
-# IDE Settings
-.vscode/
-.idea/
-
-# Data & Logs (Data klasöründeki içerikleri yollama)
+# Database & Logs (Hassas Veri)
+data/*.db
 data/logs/*
 !data/logs/.gitkeep
-data/*.db
 
-# Generated Reports (Raporları yollama)
+# Reports (Gereksiz Dosya)
 static/reports/*
 !static/reports/.gitkeep
 
-# Sensitive Info
+# IDE & System
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets
 .env
 .config

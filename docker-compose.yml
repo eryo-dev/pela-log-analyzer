@@ -4,16 +4,26 @@ services:
   pela-app:
     build: .
     container_name: pela_container
+    
     ports:
-      - "5000:5000"  # Bilgisayarının 5000 portunu -> Konteynerin 5000 portuna bağla
+      # GLOBAL STANDARD: Expose to all network interfaces (0.0.0.0)
+      # If you want to restrict access to localhost only, use: "127.0.0.1:5000:5000"
+      - "5000:5000"
+    
     volumes:
-      # Veri Kalıcılığı (Persistence):
-      # Bilgisayarındaki 'data' klasörünü -> Konteynerdeki '/app/data' ile eşle.
-      # Böylece konteyner silinse bile veritabanın ve logların silinmez.
+      # PERSISTENCE: Map local folders to container folders
+      # 1. Database & Logs: Keeps your history and downloaded logs safe
       - ./data:/app/data
       
-      # Raporlar da kaybolmasın:
+      # 2. Reports: Keeps generated HTML reports accessible
       - ./static/reports:/app/static/reports
+
     environment:
       - FLASK_ENV=production
+      
+      # TIMEZONE SETTING
+      # Default is UTC. Change this to your local timezone for accurate scheduling.
+      # Examples: "Europe/Istanbul", "America/New_York", "Asia/Tokyo"
+      - TZ=UTC
+
     restart: unless-stopped

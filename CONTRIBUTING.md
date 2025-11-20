@@ -29,7 +29,7 @@ To start contributing, you need to set up the project locally.
 
 1. **Fork and Clone** the repository:
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/pela.git](https://github.com/YOUR_USERNAME/pela.git)
+   git clone [https://github.com/eryo-dev/pela.git](https://github.com/eryo-dev/pela.git)
    cd pela
 ````
 
