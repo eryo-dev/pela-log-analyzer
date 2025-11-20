@@ -7,19 +7,22 @@ let currentMode = 'direct';
 function switchTab(mode) {
     currentMode = mode;
     
-    // Update Tab Buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    if(event && event.target) {
-        event.target.classList.add('active');
-    }
+    // Tab butonlarını güncelle
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    if(event && event.target) event.target.classList.add('active');
 
-    // Update Form Visibility
-    document.querySelectorAll('.form-section').forEach(section => {
-        section.classList.remove('active');
-    });
+    // Form alanlarını güncelle
+    document.querySelectorAll('.form-section').forEach(section => section.classList.remove('active'));
     document.getElementById(mode + '-section').classList.add('active');
+
+    // YENİ: Buton Yönetimi ve Dashboard Yükleme
+    const actionBtn = document.getElementById('generateBtn');
+    
+    if (mode === 'dashboard') {
+        actionBtn.style.display = 'none'; // Analiz butonunu gizle
+    } else {
+        actionBtn.style.display = '';
+    }
 }
 
 /**
@@ -467,4 +470,77 @@ function loadSettings() {
                 document.getElementById('webhookUrl').value = data.webhook_url;
             }
         });
+}
+
+// --- DASHBOARD CHARTS ---
+let charts = {}; // Grafik instance'larını tutmak için (yoksa üst üste biner)
+
+function loadDashboard() {
+    fetch('/dashboard-stats')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                renderCharts(data);
+            }
+        });
+}
+
+function renderCharts(data) {
+    // Ortak Tema Renkleri (CSS değişkenlerinden de alabiliriz ama basitlik için hex)
+    const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f1c40f', '#9b59b6'];
+
+    // 1. Line Chart (Daily Activity)
+    createChart('activityChart', 'line', {
+        labels: data.daily_activity.map(d => d.date),
+        datasets: [{
+            label: 'Analyses Per Day',
+            data: data.daily_activity.map(d => d.count),
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    });
+
+    // 2. Pie Chart (Top Servers)
+    createChart('serversChart', 'doughnut', {
+        labels: data.top_servers.map(s => s.server_ip),
+        datasets: [{
+            data: data.top_servers.map(s => s.count),
+            backgroundColor: colors
+        }]
+    });
+
+    // 3. Bar Chart (Connection Modes)
+    createChart('modesChart', 'bar', {
+        labels: data.conn_modes.map(m => m.connection_mode),
+        datasets: [{
+            label: 'Count',
+            data: data.conn_modes.map(m => m.count),
+            backgroundColor: ['#1abc9c', '#34495e']
+        }]
+    });
+}
+
+function createChart(canvasId, type, dataConfig) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // Eğer grafik zaten varsa yok et (Destroy) - Yoksa mouse üzerine gelince titrer
+    if (charts[canvasId]) {
+        charts[canvasId].destroy();
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+        type: type,
+        data: dataConfig,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            },
+            scales: type === 'line' || type === 'bar' ? {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            } : {}
+        }
+    });
 }

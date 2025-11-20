@@ -326,7 +326,7 @@ button.cta {
     cursor: pointer; 
     transition: all 0.2s; 
     box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2); 
-    margin-top: 20px; 
+    margin-top: 20px auto 0 auto; 
     width: 100%; 
     max-width: 300px;
 }
@@ -507,4 +507,40 @@ button.cta:disabled {
 @keyframes fadeIn { 
     from { opacity: 0; transform: translateY(5px); } 
     to { opacity: 1; transform: translateY(0); } 
+}
+
+/* --- DASHBOARD GRID --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 Sütun */
+    gap: 20px;
+    padding: 10px;
+}
+
+.chart-card {
+    background-color: var(--card-bg); /* Dark Mode uyumlu */
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.chart-card h3 {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* İlk grafik (Line Chart) tam genişlik olsun */
+.full-width {
+    grid-column: 1 / -1; /* Tüm satırı kapla */
+}
+
+/* Mobilde tek sütuna düş */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
 }

@@ -6,6 +6,7 @@
     <title>PELA | PostgreSQL Log Analyzer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -32,9 +33,11 @@
 
                 <button onclick="deleteProfile()" class="btn-delete" title="Delete Selected Profile">🗑️</button>
             </div>
+
             <div class="tabs">
                 <div class="tab-btn active" onclick="switchTab('direct')">Direct Connection</div>
                 <div class="tab-btn" onclick="switchTab('tunnel')">Jump Host Tunnel</div>
+                <div class="tab-btn" onclick="switchTab('dashboard')">Dashboard</div>
             </div>
 
             <div id="direct-section" class="form-section active">
@@ -99,6 +102,25 @@
                     </select>
                 </div>
             </div>
+
+            <div id="dashboard-section" class="form-section">
+                <div class="dashboard-grid">
+                    <div class="chart-card full-width">
+                        <h3>📅 Daily Analysis Trend</h3>
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>🏆 Top Servers</h3>
+                        <canvas id="serversChart"></canvas>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>🔗 Connection Types</h3>
+                        <canvas id="modesChart"></canvas>
+                    </div>
+                </div>
+            </div>
             
             <button id="generateBtn" class="cta">Start Analysis</button>
             <button type="button" onclick="saveProfile()" class="btn-save">💾 Save Current Settings as Profile</button>
@@ -120,7 +142,7 @@
                     <ul id="jobsUl" style="list-style: none; padding: 0; margin-top: 5px;">
                         </ul>
                 </div>
-                
+
                 <div style="margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 20px;">
                 <h3 style="color: var(--primary); font-size: 1.1rem;">🔔 Notifications (Teams)</h3>
                 <div class="flex-row">

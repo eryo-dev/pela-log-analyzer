@@ -422,6 +422,55 @@ def get_history():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/dashboard-stats')
+def dashboard_stats():
+    """Returns aggregated statistics for the dashboard charts."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # 1. Top 5 Most Analyzed Servers (Pie Chart)
+            cursor.execute("""
+                SELECT server_ip, COUNT(*) as count 
+                FROM audit_log 
+                GROUP BY server_ip 
+                ORDER BY count DESC 
+                LIMIT 5
+            """)
+            top_servers = [dict(row) for row in cursor.fetchall()]
+
+            # 2. Daily Activity - Last 7 Days (Line Chart)
+            # SQLite'ta tarih formatı string olduğu için substr ile gün bazlı grupluyoruz
+            cursor.execute("""
+                SELECT substr(timestamp, 1, 10) as date, COUNT(*) as count 
+                FROM audit_log 
+                GROUP BY date 
+                ORDER BY date DESC 
+                LIMIT 7
+            """)
+            daily_activity = [dict(row) for row in cursor.fetchall()]
+            # Grafikte soldan sağa (eskiden yeniye) gitmesi için listeyi ters çeviriyoruz
+            daily_activity.reverse()
+
+            # 3. Connection Modes Usage (Doughnut Chart)
+            cursor.execute("""
+                SELECT connection_mode, COUNT(*) as count 
+                FROM audit_log 
+                GROUP BY connection_mode
+            """)
+            conn_modes = [dict(row) for row in cursor.fetchall()]
+
+            return jsonify({
+                'success': True, 
+                'top_servers': top_servers,
+                'daily_activity': daily_activity,
+                'conn_modes': conn_modes
+            })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 # --- SETTINGS ROUTES (TEAMS) ---
 @app.route('/settings', methods=['POST', 'GET'])
 def manage_settings():
