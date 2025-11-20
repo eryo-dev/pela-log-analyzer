@@ -211,7 +211,7 @@ def send_teams_notification(status, ip, message, report_url=None):
             payload["potentialAction"] = [{
                 "@type": "OpenUri",
                 "name": "View Report",
-                "targets": [{"os": "default", "uri": "http://YOUR_SERVER_IP:5000/" + report_url}]
+                "targets": [{"os": "default", "uri": "http://localhost:5000/" + report_url}]
             }]
 
         # 4. Send
@@ -229,7 +229,7 @@ def core_analysis_task(data_payload):
     """
     client = None
     jump_client = None
-    ip = data_payload.get('server_ip')
+    ip = data_payload.get('server_ip', '').strip()
     user = data_payload.get('username')
     mode = data_payload.get('connection_mode')
     remote_path = data_payload.get('log_path')
@@ -238,7 +238,7 @@ def core_analysis_task(data_payload):
     audit_mode = f"{mode} (Auto)" if data_payload.get('is_scheduled') else mode
 
 # --- 🛠️ GELİŞMİŞ SİMÜLASYON MODU ---
-    if ip == 'TEST':
+    if ip.upper() == 'TEST':
         print(f" >> [SIMULATION] {datetime.now()}: Test senaryosu başlatıldı.")
         
         timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -619,14 +619,30 @@ def manage_schedule():
 
 @app.route('/run-analysis', methods=['POST'])
 def run_analysis():
+    """
+    Frontend'den gelen isteği karşılar ve asıl işi yapan
+    'core_analysis_task' fonksiyonuna devreder.
+    """
+    # 1. Veriyi al
     data = request.get_json()
-    # Call helper function
+    
+    # 2. İşi Uzmanına (Core Function) Devret
+    # Burası çok önemli: Kodun eski halinde burada SSH bağlantı kodları vardı.
+    # Onları sildik, artık sadece bu fonksiyonu çağırıyoruz.
     result = core_analysis_task(data)
     
+    # 3. Sonucu Frontend'e Dön
     if result['success']:
-        return jsonify({'success': True, 'message': 'Analysis Complete', 'report_url': result['report_url']})
+        return jsonify({
+            'success': True, 
+            'message': 'Analysis Complete', 
+            'report_url': result.get('report_url')
+        })
     else:
-        return jsonify({'success': False, 'message': result['message']})
+        return jsonify({
+            'success': False, 
+            'message': result.get('message', 'Unknown Error occurred during analysis.')
+        })
     
 if __name__ == '__main__':
     host_ip = os.environ.get('FLASK_HOST', '127.0.0.1')
