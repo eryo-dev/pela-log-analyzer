@@ -9,18 +9,13 @@ __pycache__/
 
 # Data & Logs (Data klasöründeki içerikleri yollama)
 data/logs/*
+!data/logs/.gitkeep
 data/*.db
 
 # Generated Reports (Raporları yollama)
 static/reports/*
+!static/reports/.gitkeep
 
 # Sensitive Info
 .env
 .config
-
-# Exceptions
-data/*.db
-data/logs/*
-static/reports/*
-!static/reports/.gitkeep
-!data/logs/.gitkeep
