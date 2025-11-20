@@ -148,5 +148,3 @@ If you find a bug, please open an Issue using the following template:
 -----
 
 Thank you for contributing to PELA\! Happy coding\! 🐧
-
-````
