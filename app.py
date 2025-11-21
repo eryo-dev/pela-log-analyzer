@@ -305,17 +305,26 @@ def core_analysis_task(data_payload):
         # 3. Analysis
         timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
         report_filename = f"report_{ip}_{timestamp_str}.html"
-        output_path = os.path.join(REPORT_FOLDER, report_filename)
+        
+        abs_output_path = os.path.join(REPORT_FOLDER, report_filename)
+
+        rel_output_path = os.path.relpath(abs_output_path, BASE_DIR)
+        rel_input_path = os.path.relpath(local_file_path, BASE_DIR)
+        rel_script_path = os.path.relpath(PGBADGER_SCRIPT, BASE_DIR)
+
         web_report_url = f"static/reports/{report_filename}"
 
         command = [
-            "perl", PGBADGER_SCRIPT, "-o", output_path, "-f", "stderr",
-            "--title", f"Analysis: {ip}", local_file_path 
+            "perl", rel_script_path, 
+            "-o", rel_output_path, 
+            "-f", "stderr",
+            "--title", f"Analysis: {ip}", 
+            rel_input_path 
         ]
-        process = subprocess.run(command, capture_output=True, text=True)
+        
+        process = subprocess.run(command, capture_output=True, text=True, cwd=BASE_DIR)
 
         if process.returncode == 0:
-            # Save to DB & Notify
             add_audit_log(ip, user, audit_mode, web_report_url)
             send_teams_notification('success', ip, 'The analysis completed successfully.', web_report_url)
             return {'success': True, 'report_url': web_report_url}
