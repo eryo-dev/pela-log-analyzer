@@ -45,7 +45,6 @@ static/reports/*
 # The container doesn't need its own build instructions
 Dockerfile
 docker-compose.yml
-k8s/*
 
 # --- SECRETS & CONFIG ---
 # SECURITY: Never include environment files containing keys/passwords
@@ -58,3 +57,5 @@ id_rsa.pub
 
 # SSH Keys (SECURITY CRITICAL)
 keys/
+!keys/.gitkeep
+*.pem

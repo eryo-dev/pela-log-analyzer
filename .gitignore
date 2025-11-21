@@ -21,11 +21,9 @@ static/reports/*
 .env
 .config
 
-# Kubernetes
-k8s/*
-
 # SSH Keys (SECURITY CRITICAL)
 keys/
+!keys/.gitkeep
 *.pem
 id_rsa
 id_rsa.pub
