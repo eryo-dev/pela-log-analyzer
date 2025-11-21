@@ -2,6 +2,9 @@
 
 All notable changes to the "PELA" project will be documented in this file.
 
+## [v1.5.3] - 2025-11-21
+ - **File Updates:** Password is now optional && Public Key SSH Feature added.
+
 ## [v1.5.2] - 2025-11-20
 ### Added
  - **File Updates:** Updated .gitignore.
