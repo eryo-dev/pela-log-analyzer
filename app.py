@@ -117,9 +117,21 @@ def create_ssh_client(mode, data):
     pwd = data.get('password')
     
     # Key-based Auth Logic
-    key_path = '/app/keys/id_rsa' 
+    # --- SMART KEY PATH SELECTION ---
+    local_key_path = os.path.join(BASE_DIR, 'keys', 'id_rsa')
+    
+    docker_key_path = '/app/keys/id_rsa'
+
+    key_path = None
+    if os.path.exists(local_key_path):
+        key_path = local_key_path
+        print(f">> Using LOCAL SSH Key: {key_path}")
+    elif os.path.exists(docker_key_path):
+        key_path = docker_key_path
+        print(f">> Using DOCKER SSH Key: {key_path}")
+    
     my_pkey = None
-    if os.path.exists(key_path):
+    if key_path:
         try:
             my_pkey = paramiko.RSAKey.from_private_key_file(key_path)
         except Exception as e:
