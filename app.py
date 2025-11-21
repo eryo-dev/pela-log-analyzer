@@ -115,55 +115,62 @@ def create_ssh_client(mode, data):
     ip = data.get('server_ip')
     user = data.get('username')
     pwd = data.get('password')
+    
+    # Key-based Auth Logic
+    key_path = '/app/keys/id_rsa' 
+    my_pkey = None
+    if os.path.exists(key_path):
+        try:
+            my_pkey = paramiko.RSAKey.from_private_key_file(key_path)
+        except Exception as e:
+            print(f"Key Error: {e}")
+
+    connect_kwargs = {
+        'hostname': ip,
+        'username': user,
+        'timeout': 10,
+        'look_for_keys': False,
+        'allow_agent': False
+    }
+
+    if my_pkey:
+        connect_kwargs['pkey'] = my_pkey
+    else:
+        connect_kwargs['password'] = pwd
 
     if mode == 'direct':
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(
-            hostname=ip, 
-            username=user, 
-            password=pwd, 
-            timeout=10, 
-            look_for_keys=False, 
-            allow_agent=False
-        )
+        client.connect(**connect_kwargs)
         return client, None
 
     elif mode == 'tunnel':
         jump_host = data.get('jump_host')
         env_name = data.get('env_name')
-        
-        # Construct complex username for PAM/Vault tunneling
         target_username = f"{user}@{user}#{env_name}@{ip}"
         
         # 1. Connect to Jump Host
+        jump_kwargs = connect_kwargs.copy()
+        jump_kwargs['hostname'] = jump_host
+        jump_kwargs['username'] = user
+        
         jump_client = paramiko.SSHClient()
         jump_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        jump_client.connect(
-            hostname=jump_host, 
-            username=user, 
-            password=pwd, 
-            timeout=10, 
-            look_for_keys=False, 
-            allow_agent=False
-        )
+        jump_client.connect(**jump_kwargs)
         
         # 2. Create Tunnel
         transport = jump_client.get_transport()
         proxy_socket = transport.open_channel("direct-tcpip", (ip, 22), ('127.0.0.1', 0))
         
         # 3. Connect to Target via Tunnel
+        target_kwargs = connect_kwargs.copy()
+        target_kwargs['hostname'] = jump_host 
+        target_kwargs['username'] = target_username
+        target_kwargs['sock'] = proxy_socket
+        
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(
-            hostname=jump_host, 
-            username=target_username, 
-            password=pwd, 
-            sock=proxy_socket, 
-            timeout=10, 
-            look_for_keys=False, 
-            allow_agent=False
-        )
+        client.connect(**target_kwargs)
         
         return client, jump_client
     
@@ -182,7 +189,7 @@ def send_teams_notification(status, ip, message, report_url=None):
             row = cursor.fetchone()
             
         if not row:
-            return # Exit silently if not configured
+            return 
 
         webhook_url = row[0]
         
@@ -206,17 +213,15 @@ def send_teams_notification(status, ip, message, report_url=None):
 
         # Add button if report link exists
         if report_url:
-            # Placeholder button logic
             payload["potentialAction"] = [{
                 "@type": "OpenUri",
                 "name": "View Report",
-                "targets": [{"os": "default", "uri": "http://YOUR_SERVER_IP:5000/" + report_url}]
+                "targets": [{"os": "default", "uri": "http://localhost:5000/" + report_url}]
             }]
 
         # 4. Send
         headers = {'Content-Type': 'application/json'}
         requests.post(webhook_url, data=json.dumps(payload), headers=headers)
-        print(">> Teams notification sent.")
 
     except Exception as e:
         print(f"Teams Notification Error: {e}")
