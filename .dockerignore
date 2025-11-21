@@ -45,9 +45,13 @@ static/reports/*
 # The container doesn't need its own build instructions
 Dockerfile
 docker-compose.yml
-k8s/
+k8s/*
 
 # --- SECRETS & CONFIG ---
 # SECURITY: Never include environment files containing keys/passwords
 .env
 .config
+
+# --- KUBERNETES ---
+id_rsa
+id_rsa.pub
