@@ -1,12 +1,53 @@
-venv/
-.git/
+# --- VERSION CONTROL ---
+# Exclude Git history and metadata to keep image small and secure
+.git
 .gitignore
+.github
+
+# --- DOCUMENTATION ---
+# Docs are for developers, not needed inside the container
+CONTRIBUTING.md
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+LICENSE
+README.md
+docs/
+
+# --- PYTHON ENVIRONMENT ---
+# Critical: Never copy local virtual environments (Linux container cannot use Windows venv)
+venv/
+env/
+
+# --- PYTHON CACHE ---
+# Exclude bytecode to prevent compatibility issues
 __pycache__/
 *.pyc
-data/logs/*
-data/*.db
-.env
+*.pyo
+*.pyd
+
+# --- IDE SETTINGS ---
+# Exclude editor configuration files
 .vscode/
+.idea/
+*.swp
+
+# --- LOCAL DATA & LOGS ---
+# We want a fresh state in the container. Data persistence is handled via Volumes.
+data/*.db
+data/logs/*
+# Note: We don't exclude .gitkeep to ensure directory structure exists
+
+# --- GENERATED REPORTS ---
+# Start with an empty report directory
+static/reports/*
+
+# --- DOCKER CONFIGURATION ---
+# The container doesn't need its own build instructions
 Dockerfile
 docker-compose.yml
-README.md
+k8s/
+
+# --- SECRETS & CONFIG ---
+# SECURITY: Never include environment files containing keys/passwords
+.env
+.config

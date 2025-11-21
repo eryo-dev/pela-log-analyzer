@@ -20,3 +20,6 @@ static/reports/*
 # Secrets
 .env
 .config
+
+# Kubernetes
+k8s/*

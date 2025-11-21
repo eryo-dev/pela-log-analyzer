@@ -1,29 +1,31 @@
-# version: '3.8' <-- This line for old versions
-
 services:
   pela-app:
     build: .
     container_name: pela_container
     
     ports:
-      # GLOBAL STANDARD: Expose to all network interfaces (0.0.0.0)
-      # If you want to restrict access to localhost only, use: "127.0.0.1:5000:5000"
+      # NETWORK CONFIGURATION
+      # Mapping container port 5000 to host port 5000.
+      # To restrict access to localhost only (Security), use: "127.0.0.1:5000:5000"
       - "5000:5000"
     
     volumes:
-      # PERSISTENCE: Map local folders to container folders
-      # 1. Database & Logs: Keeps your history and downloaded logs safe
+      # DATA PERSISTENCE
+      # Map local directories to container directories to prevent data loss on restart.
+      
+      # 1. Database & Logs: Stores 'pela.db' and raw log files
       - ./data:/app/data
       
-      # 2. Reports: Keeps generated HTML reports accessible
+      # 2. Reports: Stores generated HTML reports
       - ./static/reports:/app/static/reports
 
     environment:
       - FLASK_ENV=production
       
       # TIMEZONE SETTING
-      # Default is UTC. Change this to your local timezone for accurate scheduling.
-      # Examples: "Europe/Istanbul", "America/New_York", "Asia/Tokyo"
+      # Default is UTC for global compatibility.
+      # Users should change this to their local timezone (e.g., "Europe/Istanbul", "America/New_York")
+      # for the Scheduler to run tasks at the correct local time.
       - TZ=UTC
 
     restart: unless-stopped
