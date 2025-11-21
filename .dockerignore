@@ -55,3 +55,6 @@ k8s/*
 # --- KUBERNETES ---
 id_rsa
 id_rsa.pub
+
+# SSH Keys (SECURITY CRITICAL)
+keys/

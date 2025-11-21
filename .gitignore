@@ -24,6 +24,8 @@ static/reports/*
 # Kubernetes
 k8s/*
 
-# SSH Keys
+# SSH Keys (SECURITY CRITICAL)
+keys/
+*.pem
 id_rsa
 id_rsa.pub

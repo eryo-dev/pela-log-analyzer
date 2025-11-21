@@ -2,6 +2,14 @@
 
 All notable changes to the "PELA" project will be documented in this file.
 
+## [v1.6.0] - 2025-11-21
+### Fixed
+- **Windows Compatibility:** Resolved `pgBadger` path issues on Windows by implementing relative path logic in `app.py`.
+- **SSH Key Handling:** Added smart detection to look for SSH keys in local `keys/` directory (Dev) or `/app/keys/` (Docker/K8s).
+
+### Changed
+- **Docker Compose:** Added volume mapping for local SSH keys to facilitate testing.
+
 ## [v1.5.3] - 2025-11-21
  - **File Updates:** Password is now optional && Public Key SSH Feature added.
 

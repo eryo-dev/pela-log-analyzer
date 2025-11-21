@@ -7,7 +7,7 @@ services:
       # NETWORK CONFIGURATION
       # Mapping container port 5000 to host port 5000.
       # To restrict access to localhost only (Security), use: "127.0.0.1:5000:5000"
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     
     volumes:
       # DATA PERSISTENCE
@@ -18,6 +18,9 @@ services:
       
       # 2. Reports: Stores generated HTML reports
       - ./static/reports:/app/static/reports
+
+      # 3. SSH Keys: Mount SSH keys from host to container (Read-Only)
+      - ./keys:/app/keys:ro
 
     environment:
       - FLASK_ENV=production

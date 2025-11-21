@@ -61,6 +61,20 @@ Before running PELA locally (without Docker), ensure you have:
 
 ## 📥 Installation & Usage
 
+## 🔑 SSH Key Setup (Passwordless Access)
+
+PELA supports SSH keys for secure, passwordless connections.
+
+### For Local Development (Windows/Linux)
+1. Create a folder named `keys` in the project root.
+2. Place your private key file named `id_rsa` inside it.
+3. PELA will automatically detect and use `keys/id_rsa`.
+4. And of course you have to put your `id_rsa.pub in your` -> `~/.ssh/authorized_keys` folder
+
+### For Docker / Kubernetes
+* **Docker Compose:** Place the key in the local `keys/` folder; it is automatically mounted to `/app/keys`.
+* **Kubernetes:** Create a Secret named `ssh-key-secret` containing your `id_rsa` and mount it to `/app/keys`.
+
 ### Option A: Docker Deployment (Recommended)
 
 1.  **Clone the repository:**
