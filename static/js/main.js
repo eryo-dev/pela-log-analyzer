@@ -123,8 +123,8 @@ function fetchLogFiles(mode) {
         payload.search_path = document.getElementById('t_search_dir').value.trim();
     }
 
-    if (!payload.server_ip || !payload.password) {
-        alert("Connection Error: Please enter Server IP and Password to list files.");
+    if (!payload.server_ip) {
+        alert("Connection Error: Please enter Server IP to list files.");
         return;
     }
 
